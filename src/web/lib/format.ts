@@ -1,10 +1,19 @@
 import type { Address } from './types';
+import { getLanguage } from './i18n';
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+const rtfZh = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' });
 
 export function timeAgo(ms: number, now = Date.now()): string {
   const diff = ms - now;
   const abs = Math.abs(diff);
+  if (getLanguage() === 'zh') {
+    if (abs < 45_000) return '刚刚';
+    if (abs < 3_600_000) return rtfZh.format(Math.round(diff / 60_000), 'minute');
+    if (abs < 86_400_000) return rtfZh.format(Math.round(diff / 3_600_000), 'hour');
+    if (abs < 30 * 86_400_000) return rtfZh.format(Math.round(diff / 86_400_000), 'day');
+    return new Date(ms).toLocaleDateString('zh-CN');
+  }
   if (abs < 45_000) return 'just now';
   if (abs < 3_600_000) return rtf.format(Math.round(diff / 60_000), 'minute');
   if (abs < 86_400_000) return rtf.format(Math.round(diff / 3_600_000), 'hour');

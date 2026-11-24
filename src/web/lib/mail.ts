@@ -6,18 +6,18 @@ import type { Address, Mailbox, Message } from './types';
 export type View = (typeof FOLDERS)[number] | 'scheduled' | 'assigned' | `label-${number}` | 'search';
 
 export const VIEW_LABELS: Record<string, string> = {
-  inbox: 'Inbox',
-  starred: 'Starred',
-  snoozed: 'Snoozed',
-  sent: 'Sent',
-  drafts: 'Drafts',
-  scheduled: 'Scheduled',
-  archive: 'Archive',
-  allmail: 'All mail',
-  spam: 'Spam',
-  trash: 'Trash',
-  assigned: 'Assigned to me',
-  search: 'Search',
+  inbox: 'mail.view.inbox',
+  starred: 'mail.view.starred',
+  snoozed: 'mail.view.snoozed',
+  sent: 'mail.view.sent',
+  drafts: 'mail.view.drafts',
+  scheduled: 'mail.view.scheduled',
+  archive: 'mail.view.archive',
+  allmail: 'mail.view.allmail',
+  spam: 'mail.view.spam',
+  trash: 'mail.view.trash',
+  assigned: 'mail.view.assigned',
+  search: 'mail.view.search',
 };
 
 export function viewQuery(view: string): string {
@@ -89,9 +89,9 @@ export function snoozePresets(now = new Date()): { label: string; at: number }[]
   const mon = new Date(now);
   mon.setDate(now.getDate() + ((8 - now.getDay()) % 7 || 7));
   return [
-    { label: 'Later today', at: laterToday.getTime() },
-    { label: 'Tomorrow morning', at: tomorrow.getTime() },
-    { label: 'This weekend', at: at(sat, 9).getTime() },
-    { label: 'Next week', at: at(mon, 8).getTime() },
+    { label: 'mail.snooze.laterToday', at: laterToday.getTime() },
+    { label: 'mail.snooze.tomorrowMorning', at: tomorrow.getTime() },
+    { label: 'mail.snooze.thisWeekend', at: at(sat, 9).getTime() },
+    { label: 'mail.snooze.nextWeek', at: at(mon, 8).getTime() },
   ];
 }
