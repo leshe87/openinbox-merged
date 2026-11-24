@@ -1,4 +1,5 @@
 import { cn } from '../lib/utils';
+import { useT } from '../lib/i18n';
 
 // A rough strength estimate: length and character variety, which is what matters most.
 export function passwordScore(p: string): number {
@@ -14,8 +15,9 @@ export function passwordScore(p: string): number {
 }
 
 export function PasswordStrength({ password }: { password: string }) {
+  const t = useT();
   const score = passwordScore(password);
-  const labels = ['Too short', 'Weak', 'Okay', 'Good', 'Strong'];
+  const labels = [t('auth.strengthTooShort'), t('auth.strengthWeak'), t('auth.strengthOkay'), t('auth.strengthGood'), t('auth.strengthStrong')];
   const colors = ['bg-danger', 'bg-danger', 'bg-warning', 'bg-success', 'bg-success'];
   if (!password) return null;
   return (
