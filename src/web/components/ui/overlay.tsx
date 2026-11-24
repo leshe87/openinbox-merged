@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, CircleCheck, CircleX, Info, LoaderCircle, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -135,10 +135,53 @@ export function ConfirmDialog({
 export function Menu({ trigger, children, align = 'end', className }: { trigger: (props: { onClick: () => void; open: boolean }) => ReactNode; children: ReactNode; align?: 'start' | 'end'; className?: string }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number; maxHeight: number }>({ top: 0, maxHeight: 300 });
+
+  // The panel lives in a portal on document.body, positioned under (or above) the
+  // trigger. It must not stay an absolute child of the trigger: the frosted-glass
+  // theme puts backdrop-filter on .bg-bg/.bg-surface, and every such ancestor
+  // becomes a stacking context, so page content painted over the menu (the
+  // account menu's lower items were hidden behind the cards below the top bar).
+  // Dialogs and tooltips already portal for the same reason.
+  const place = useCallback(() => {
+    const anchor = root.current?.getBoundingClientRect();
+    if (!anchor) return;
+    const gap = 4;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const below = anchor.bottom + gap;
+    const above = anchor.top - gap;
+    const panelH = panel.current?.offsetHeight ?? 0;
+    const openUp = panelH > 0 && below + Math.min(panelH, 320) > vh && above > below;
+    const maxHeight = Math.max(160, (openUp ? above : vh - below) - 8);
+    setPos({
+      top: openUp ? Math.max(8, above - Math.min(panelH, maxHeight)) : below,
+      maxHeight,
+      ...(align === 'end' ? { right: Math.max(8, vw - anchor.right) } : { left: Math.max(8, anchor.left) }),
+    });
+  }, [align]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    place();
+    const onScroll = () => place();
+    const onResize = () => place();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [open, place]);
+
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (root.current?.contains(t)) return; // the trigger toggles itself
+      if (panel.current?.contains(t)) return; // item clicks close via onClick below
+      setOpen(false);
     };
     const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', close);
@@ -147,22 +190,25 @@ export function Menu({ trigger, children, align = 'end', className }: { trigger:
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', key);
     };
-  }, [open]);
+  }, [open ]);
   return (
     <div ref={root} className="relative inline-block">
       {trigger({ onClick: () => setOpen((o) => !o), open })}
-      {open && (
-        <div
-          className={cn(
-            'absolute z-40 mt-1 min-w-[220px] rounded-[10px] border border-border bg-surface p-[5px] shadow-pop animate-fade-in',
-            align === 'end' ? 'right-0' : 'left-0',
-            className,
-          )}
-          onClick={() => setOpen(false)}
-        >
-          {children}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={panel}
+            className={cn(
+              'fixed z-50 min-w-[220px] overflow-y-auto rounded-[10px] border border-border bg-surface p-[5px] shadow-pop animate-fade-in',
+              className,
+            )}
+            style={{ top: pos.top, left: pos.left, right: pos.right, maxHeight: pos.maxHeight }}
+            onClick={() => setOpen(false)}
+          >
+            {children}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

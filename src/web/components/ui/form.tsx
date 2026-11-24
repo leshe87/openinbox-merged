@@ -1,6 +1,7 @@
 import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Check, Eye, EyeOff, Minus } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useT } from '../../lib/i18n';
 
 const control =
   'w-full rounded-lg border border-border bg-surface px-3 text-[13px] text-fg placeholder:text-faint transition-colors focus:border-primary focus:outline-none focus:ring-3 focus:ring-[var(--ring)] disabled:opacity-60 disabled:bg-surface-2';
@@ -11,6 +12,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 
 export const PasswordInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function PasswordInput({ className, ...rest }, ref) {
   const [show, setShow] = useState(false);
+  const t = useT();
   return (
     <div className="relative">
       <input ref={ref} type={show ? 'text' : 'password'} className={cn(control, 'h-9 pr-9', className)} {...rest} />
@@ -19,7 +21,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HT
         tabIndex={-1}
         onClick={() => setShow((s) => !s)}
         className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-faint hover:text-fg"
-        aria-label={show ? 'Hide' : 'Show'}
+        aria-label={show ? t('misc.hide') : t('misc.show')}
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
@@ -87,13 +89,14 @@ export function AddressInput({
   placeholder?: string;
   autoFocus?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="flex h-9 overflow-hidden rounded-lg border border-border bg-surface text-[13px] transition-colors focus-within:border-primary focus-within:ring-3 focus-within:ring-[var(--ring)]">
       <input id={id} value={local} onChange={(e) => onLocal(e.target.value.trim())} placeholder={placeholder} autoFocus={autoFocus} className="min-w-0 flex-1 bg-transparent px-3 outline-none placeholder:text-faint" />
       <select
         value={domainId ?? ''}
         onChange={(e) => onDomain(Number(e.target.value))}
-        aria-label="Domain"
+        aria-label={t('misc.domain')}
         className="select-chevron max-w-[55%] border-l border-border bg-surface-2 pr-8 pl-2.5 text-muted outline-none"
       >
         {domains.map((d) => (

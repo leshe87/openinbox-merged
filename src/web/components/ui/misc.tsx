@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Check, CircleCheck, CircleX, Copy, Info, LoaderCircle, TriangleAlert } from 'lucide-react';
 import { cn, copyText } from '../../lib/utils';
 import { hue, initials } from '../../lib/format';
+import { useT } from '../../lib/i18n';
 
 export function Spinner({ className }: { className?: string }) {
   return <LoaderCircle className={cn('h-4 w-4 animate-spin text-muted', className)} />;
@@ -159,8 +160,10 @@ export function Avatar({ name, address, size = 32, logo }: { name: string; addre
   );
 }
 
-export function CopyButton({ text, label = 'Copy', className }: { text: string; label?: string; className?: string }) {
+export function CopyButton({ text, label: propLabel, className }: { text: string; label?: string; className?: string }) {
   const [done, setDone] = useState(false);
+  const t = useT();
+  const label = propLabel ?? t('misc.copy');
   return (
     <button
       type="button"
@@ -176,7 +179,7 @@ export function CopyButton({ text, label = 'Copy', className }: { text: string; 
       }}
     >
       {done ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {done ? 'Copied' : label}
+      {done ? t('misc.copied') : label}
     </button>
   );
 }
