@@ -24,7 +24,11 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    cloudflare(e2e ? { persistState: { path: '.wrangler/e2e-state' }, config: { vars: e2eVars } } : {}),
+    // End-to-end tests run fully locally: the merged wrangler.jsonc binds Workers AI,
+    // which cannot run in local workerd, so the plugin would otherwise start a remote
+    // proxy session that needs CLOUDFLARE_API_TOKEN in non-interactive CI. E2E never
+    // calls AI (off by default, every external API is mocked), so disable remote bindings.
+    cloudflare(e2e ? { persistState: { path: '.wrangler/e2e-state' }, config: { vars: e2eVars }, remoteBindings: false } : {}),
   ],
   publicDir: 'src/web/public',
   define: {
