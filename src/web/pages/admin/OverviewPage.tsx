@@ -104,7 +104,7 @@ export function OverviewPage() {
         <div className="flex flex-wrap items-center gap-3 rounded-[10px] border border-primary/20 bg-primary-soft py-2.5 pr-3 pl-3.5 text-[13px] text-primary-text">
           <ArrowUpRight className="h-[15px] w-[15px] shrink-0" />
           <span className="min-w-0 flex-1 text-pretty">
-            <b className="font-semibold">{t('admin.overviewUpdateAvailable', { latest: o.update.latest })}</b> {t('admin.overviewUpdateBody', { current: o.update.current })}
+            <b className="font-semibold">{t('admin.overviewUpdateAvailable', { latest: o.update.latest ?? '' })}</b> {t('admin.overviewUpdateBody', { current: o.update.current })}
           </span>
           {o.update.url && (
             <a href={o.update.url} target="_blank" rel="noreferrer" className="font-medium hover:underline">

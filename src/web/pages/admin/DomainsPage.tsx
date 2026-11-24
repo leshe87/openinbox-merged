@@ -374,7 +374,7 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
         if (s?.logo) await rewriteRecord();
         await refresh();
       },
-      t('admin.domainsAppAddressSet', { url: httpsOrigin }),
+      t('admin.domainsAppAddressSet', { url: httpsOrigin ?? '' }),
     );
   const hasCert = cert === undefined ? !!s?.logo?.certificateUrl : !!cert;
 
@@ -540,7 +540,7 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
                     )
                   }
                 >
-                  {s.record.current === s.record.expected ? s.record.current : t('admin.domainsRecordExpected', { expected: s.record.expected, found: s.record.current ?? t('admin.domainsNoneValue') })}
+                  {s.record.current === s.record.expected ? s.record.current : t('admin.domainsRecordExpected', { expected: s.record.expected ?? t('admin.domainsNoneValue'), found: s.record.current ?? t('admin.domainsNoneValue') })}
                 </LogoCheck>
               )}
             </div>

@@ -672,14 +672,14 @@ function StorageSection() {
             )}
             <p className="text-[13px] leading-relaxed text-muted text-pretty">
               {s?.mode === 'r2'
-                ? t('admin.integrationsR2Body', { bucket: s.bucket })
+                ? t('admin.integrationsR2Body', { bucket: s.bucket ?? '' })
                 : t('admin.integrationsTextOnlyBody')}
             </p>
             {s?.configured && (
               <div className="flex flex-wrap items-center gap-2.5 text-[12.5px]">
                 <StatusPill tone="success">{t('admin.integrationsConnected')}</StatusPill>
                 <span className="min-w-0 flex-1 truncate text-muted">
-                  {t('admin.integrationsBucketKey', { bucket: s.bucket, key: s.accessKeyId })}
+                  {t('admin.integrationsBucketKey', { bucket: s.bucket ?? '', key: s.accessKeyId ?? '' })}
                 </span>
                 <Button
                   size="xs"
