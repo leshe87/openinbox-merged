@@ -22,6 +22,8 @@ import {
   setupTokenSchema,
   updateMailboxSchema,
   updateUserSchema,
+  externalAccountSchema,
+  externalAccountPatchSchema,
 } from '../../shared/schemas';
 import { all, first, run } from '../db/db';
 import { loadSettings, saveSettings, type AppSettings } from '../db/settings';
@@ -73,6 +75,8 @@ import {
 } from '../services/providers';
 import { listSuppressions, removeSuppression } from '../services/webhooks';
 import { retryMessage } from '../services/send';
+import { createExternalAccount, deleteExternalAccount, listExternalAccounts, testExternalAccount, updateExternalAccount } from '../services/external-accounts';
+import { fetchExternalAccount } from '../services/external-fetch';
 import { enforceDmarc, fetchLogo, getSenderLogo, removeSenderLogo, setSenderLogo } from '../services/bimi';
 import { noteRecentSenders } from '../services/sender-logos';
 import { deleteBlobs } from '../services/threads';
@@ -402,6 +406,33 @@ admin.post('/providers/:id/domains/:domainId', async (c) => {
 admin.post('/providers/:id/domains/:domainId/check', async (c) => {
   return c.json(await checkSendingDomain(c.env, intParam(c, 'id'), intParam(c, 'domainId')));
 });
+
+// External accounts (POP3/IMAP pull) ---------------------------------------------------------------
+
+admin.get('/external-accounts', async (c) => c.json(await listExternalAccounts(c.env)));
+
+admin.post('/external-accounts', async (c) => {
+  const input = await body(c, externalAccountSchema);
+  const r = await createExternalAccount(c.env, input);
+  await audit(c.env.DB, { userId: currentUser(c).id, action: 'external-account.added', target: `${input.protocol}://${input.host}`, ip: clientIp(c) });
+  return c.json(r);
+});
+
+admin.patch('/external-accounts/:id', async (c) => {
+  await updateExternalAccount(c.env, intParam(c, 'id'), await body(c, externalAccountPatchSchema));
+  await audit(c.env.DB, { userId: currentUser(c).id, action: 'external-account.updated', target: c.req.param('id'), ip: clientIp(c) });
+  return c.json({ ok: true });
+});
+
+admin.delete('/external-accounts/:id', async (c) => {
+  await deleteExternalAccount(c.env, intParam(c, 'id'));
+  await audit(c.env.DB, { userId: currentUser(c).id, action: 'external-account.removed', target: c.req.param('id'), ip: clientIp(c) });
+  return c.json({ ok: true });
+});
+
+admin.post('/external-accounts/:id/test', async (c) => c.json(await testExternalAccount(c.env, intParam(c, 'id'))));
+
+admin.post('/external-accounts/:id/fetch', async (c) => c.json(await fetchExternalAccount(c.env, intParam(c, 'id'))));
 
 // Cloudflare token ---------------------------------------------------------------------------------
 
