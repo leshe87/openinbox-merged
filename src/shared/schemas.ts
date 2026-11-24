@@ -113,6 +113,41 @@ export const providerPatchSchema = z.object({
   priority: z.number().int().min(0).max(1000).optional(),
 });
 
+// External mail accounts (POP3/IMAP pull). The password is sent once and stored
+// encrypted; it is never returned by the API. maxImport caps the total messages
+// pulled for the account (0 = unlimited) so a large backfill cannot fill D1.
+export const externalAccountSchema = z.object({
+  protocol: z.enum(['pop3', 'imap']),
+  name: z.string().trim().max(60).default(''),
+  host: z.string().trim().min(1).max(253),
+  port: z.number().int().min(1).max(65535),
+  security: z.enum(['tls', 'starttls', 'plain']).default('tls'),
+  username: z.string().trim().min(1).max(254),
+  password: z.string().min(1).max(500),
+  mailboxId: id,
+  folder: z.string().trim().min(1).max(100).default('INBOX'),
+  deleteAfterFetch: z.boolean().default(false),
+  markSeen: z.boolean().default(false),
+  maxImport: z.number().int().min(0).max(1_000_000).default(5000),
+  enabled: z.boolean().default(true),
+});
+
+export const externalAccountPatchSchema = z.object({
+  protocol: z.enum(['pop3', 'imap']).optional(),
+  name: z.string().trim().max(60).optional(),
+  host: z.string().trim().min(1).max(253).optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  security: z.enum(['tls', 'starttls', 'plain']).optional(),
+  username: z.string().trim().min(1).max(254).optional(),
+  password: z.string().min(1).max(500).optional(),
+  mailboxId: id.optional(),
+  folder: z.string().trim().min(1).max(100).optional(),
+  deleteAfterFetch: z.boolean().optional(),
+  markSeen: z.boolean().optional(),
+  maxImport: z.number().int().min(0).max(1_000_000).optional(),
+  enabled: z.boolean().optional(),
+});
+
 export const r2Schema = z.object({
   bucket: z.string().trim().min(3).max(63).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, 'Bucket names use lowercase letters, digits and dashes.'),
   accessKeyId: z.string().trim().min(10).max(200),
