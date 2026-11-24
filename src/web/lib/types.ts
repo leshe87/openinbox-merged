@@ -210,6 +210,33 @@ export interface MailboxAdmin {
   createdAt: number;
 }
 
+// External POP3/IMAP account pulled into a local mailbox. The password is
+// never returned by the API.
+export interface ExternalAccount {
+  id: number;
+  protocol: 'pop3' | 'imap';
+  name: string;
+  host: string;
+  port: number;
+  security: 'tls' | 'starttls' | 'plain';
+  username: string;
+  mailboxId: number;
+  mailboxAddress: string;
+  folder: string;
+  deleteAfterFetch: boolean;
+  markSeen: boolean;
+  maxImport: number;
+  enabled: boolean;
+  importedCount: number;
+  lastFetchedAt: number | null;
+  lastFetchedCount: number;
+  lastStatus: string | null;
+  lastError: string | null;
+  failureCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface PermissionCheck {
   key: string;
   name: string;
