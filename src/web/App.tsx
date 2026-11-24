@@ -15,7 +15,6 @@ import { AppShell } from './components/layout/AppShell';
 const MailPage = lazy(() => import('./pages/mail/MailPage'));
 const AdminRoutes = lazy(() => import('./pages/admin/AdminRoutes'));
 const AiRoutes = lazy(() => import('./pages/ai/AiRoutes'));
-const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 
 export function App() {
   const { data: session, isLoading, error, refetch } = useSession();
