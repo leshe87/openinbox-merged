@@ -20,6 +20,7 @@ import { useAction, useDebounced, useInvalidate } from '../../lib/hooks';
 import { fullDate, timeAgo } from '../../lib/format';
 import { AI_CATEGORIES, AI_PLATFORM_CATEGORIES } from '../../../shared/constants';
 import { cn } from '../../lib/utils';
+import { useT } from '../../lib/i18n';
 import { Button } from '../../components/ui/button';
 import { Field, Input, PasswordInput, Select, Switch, Textarea } from '../../components/ui/form';
 import { Alert, Badge, Card, CardHeader, EmptyState, PageHeader, PageSpinner, StatusPill } from '../../components/ui/misc';
@@ -107,50 +108,52 @@ export interface SecurityStats {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  register: 'Registration',
-  verify: 'Verification',
-  security: 'Security',
-  bill: 'Billing',
-  update: 'Update',
-  marketing: 'Marketing',
-  social: 'Social',
+  register: 'ai.category.register',
+  verify: 'ai.category.verify',
+  security: 'ai.category.security',
+  bill: 'ai.category.bill',
+  update: 'ai.category.update',
+  marketing: 'ai.category.marketing',
+  social: 'ai.category.social',
 };
 
 const PLATFORM_CATEGORY_LABELS: Record<string, string> = {
-  dev: 'Dev',
-  ai: 'AI',
-  saas: 'SaaS',
-  social: 'Social',
-  cloud: 'Cloud',
-  web3: 'Web3',
-  finance: 'Finance',
-  shop: 'Shop',
-  news: 'News',
-  other: 'Other',
+  dev: 'ai.platformCategory.dev',
+  ai: 'ai.platformCategory.ai',
+  saas: 'ai.platformCategory.saas',
+  social: 'ai.platformCategory.social',
+  cloud: 'ai.platformCategory.cloud',
+  web3: 'ai.platformCategory.web3',
+  finance: 'ai.platformCategory.finance',
+  shop: 'ai.platformCategory.shop',
+  news: 'ai.platformCategory.news',
+  other: 'ai.platformCategory.other',
 };
 
-const IDENTITY_STATUS = ['Active', 'Disabled', 'Long unused'] as const;
+const IDENTITY_STATUS = ['ai.identityStatus.active', 'ai.identityStatus.disabled', 'ai.identityStatus.longUnused'] as const;
 const SECURITY_TYPE_LABELS: Record<string, string> = {
-  password_change: 'Password change',
-  abnormal_login: 'Abnormal login',
-  data_breach: 'Data breach',
+  password_change: 'ai.securityType.passwordChange',
+  abnormal_login: 'ai.securityType.abnormalLogin',
+  data_breach: 'ai.securityType.dataBreach',
 };
-const SECURITY_STATUS_LABELS = ['Unprocessed', 'Confirmed', 'Ignored', 'Resolved'] as const;
+const SECURITY_STATUS_LABELS = ['ai.securityStatus.unprocessed', 'ai.securityStatus.confirmed', 'ai.securityStatus.ignored', 'ai.securityStatus.resolved'] as const;
 
-function categoryLabel(v: string): string {
-  return CATEGORY_LABELS[v] ?? v;
+function categoryLabel(v: string, t: (key: string) => string): string {
+  const key = CATEGORY_LABELS[v];
+  return key ? t(key) : v;
 }
 
-function platformCategoryLabel(v: string): string {
-  return PLATFORM_CATEGORY_LABELS[v] ?? v;
+function platformCategoryLabel(v: string, t: (key: string) => string): string {
+  const key = PLATFORM_CATEGORY_LABELS[v];
+  return key ? t(key) : v;
 }
 
 function riskTone(level: number): 'danger' | 'warning' | 'neutral' {
   return level === 2 ? 'danger' : level === 1 ? 'warning' : 'neutral';
 }
 
-function riskLabel(level: number): string {
-  return level === 2 ? 'High risk' : level === 1 ? 'Medium risk' : 'Low risk';
+function riskLabel(level: number, t: (key: string) => string): string {
+  return level === 2 ? t('ai.risk.high') : level === 1 ? t('ai.risk.medium') : t('ai.risk.low');
 }
 
 function useAiStatus() {
@@ -162,15 +165,16 @@ const row = 'flex items-start gap-3 border-b border-border px-5 py-3.5 text-[13p
 // --- Layout -----------------------------------------------------------------------------------
 
 const items = [
-  { to: '/ai/identities', label: 'Identities', Icon: Fingerprint },
-  { to: '/ai/analysis', label: 'Analysis', Icon: MailSearch },
-  { to: '/ai/digests', label: 'Digests', Icon: Newspaper },
-  { to: '/ai/security', label: 'Security', Icon: ShieldAlert },
-  { to: '/ai/assistant', label: 'Assistant', Icon: Bot },
-  { to: '/ai/settings', label: 'Settings', Icon: Settings, admin: true },
+  { to: '/ai/identities', label: 'ai.nav.identities', Icon: Fingerprint },
+  { to: '/ai/analysis', label: 'ai.nav.analysis', Icon: MailSearch },
+  { to: '/ai/digests', label: 'ai.nav.digests', Icon: Newspaper },
+  { to: '/ai/security', label: 'ai.nav.security', Icon: ShieldAlert },
+  { to: '/ai/assistant', label: 'ai.nav.assistant', Icon: Bot },
+  { to: '/ai/settings', label: 'ai.nav.settings', Icon: Settings, admin: true },
 ];
 
 function AiLayout() {
+  const t = useT();
   const { data: session } = useSession();
   const isAdmin = useIsAdmin();
   const status = useAiStatus();
@@ -197,7 +201,7 @@ function AiLayout() {
                 }
               >
                 <Icon className="h-[15px] w-[15px]" />
-                <span className="flex-1">{label}</span>
+                <span className="flex-1">{t(label)}</span>
               </NavLink>
             ))}
         </nav>
@@ -206,11 +210,11 @@ function AiLayout() {
             <>
               <span className="flex items-center gap-1.5 font-medium text-fg">
                 <span className={cn('h-[7px] w-[7px] rounded-full', s.enabled ? 'bg-success' : 'bg-faint')} />
-                {s.enabled ? `AI on · ${s.provider}` : 'AI off'}
+                {s.enabled ? t('ai.status.on', { provider: s.provider }) : t('ai.status.off')}
               </span>
               <span className="truncate">
-                {s.model} {s.hasApiKey ? '· API key set' : '· no API key'}
-                {s.provider === 'workers' && (s.workersAiBound ? ' · Workers AI bound' : ' · Workers AI not bound')}
+                {s.model} {s.hasApiKey ? t('ai.status.apiKeySet') : t('ai.status.noApiKey')}
+                {s.provider === 'workers' && (s.workersAiBound ? t('ai.status.workersBound') : t('ai.status.workersNotBound'))}
               </span>
             </>
           ) : (
@@ -272,6 +276,7 @@ function identityFormBody(f: IdentityForm) {
 }
 
 export function IdentitiesPage() {
+  const t = useT();
   const [category, setCategory] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [q, setQ] = useState('');
@@ -301,18 +306,18 @@ export function IdentitiesPage() {
         setEditing(null);
         await refresh();
       },
-      id === null ? 'Identity added' : 'Identity saved',
+      id === null ? t('ai.identities.addedToast') : t('ai.identities.savedToast'),
     );
   };
 
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Identities"
-        description="The digital identities discovered in your mail — every account you signed up for, in one place."
+        title={t('ai.identities.title')}
+        description={t('ai.identities.description')}
         actions={
           <Button variant="primary" icon={<Plus className="h-[15px] w-[15px]" />} onClick={() => setEditing({ id: null, form: emptyIdentityForm })}>
-            Add identity
+            {t('ai.identities.add')}
           </Button>
         }
       />
@@ -320,27 +325,27 @@ export function IdentitiesPage() {
         <div className="flex flex-wrap gap-2">
           {stats.data.map((s) => (
             <button key={s.category} type="button" onClick={() => setCategory(category === s.category ? '' : s.category)} className={cn('rounded-full border px-3 py-1 text-xs font-medium transition-colors', category === s.category ? 'border-primary bg-primary-soft text-primary-text' : 'border-border bg-surface text-muted hover:text-fg')}>
-              {platformCategoryLabel(s.category)} · {s.total}
+              {platformCategoryLabel(s.category, t)} · {s.total}
             </button>
           ))}
         </div>
       )}
       <Card>
         <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3.5">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, platform or email…" className="max-w-xs" aria-label="Search identities" />
-          <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-auto" aria-label="Filter by category">
-            <option value="">All categories</option>
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ai.identities.searchPlaceholder')} className="max-w-xs" aria-label={t('ai.identities.searchAria')} />
+          <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-auto" aria-label={t('ai.filterByCategory')}>
+            <option value="">{t('ai.filter.allCategories')}</option>
             {AI_PLATFORM_CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {platformCategoryLabel(c)}
+                {platformCategoryLabel(c, t)}
               </option>
             ))}
           </Select>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-auto" aria-label="Filter by status">
-            <option value="">All statuses</option>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-auto" aria-label={t('ai.filterByStatus')}>
+            <option value="">{t('ai.filter.allStatuses')}</option>
             {IDENTITY_STATUS.map((label, i) => (
               <option key={label} value={i}>
-                {label}
+                {t(label)}
               </option>
             ))}
           </Select>
@@ -348,8 +353,8 @@ export function IdentitiesPage() {
         {list.isLoading ? (
           <PageSpinner />
         ) : !list.data?.length ? (
-          <EmptyState icon={<Fingerprint />} title="No identities yet.">
-            Run a batch analysis or confirm a new identity from the Analysis page.
+          <EmptyState icon={<Fingerprint />} title={t('ai.identities.emptyTitle')}>
+            {t('ai.identities.emptyBody')}
           </EmptyState>
         ) : (
           list.data.map((d) => (
@@ -357,28 +362,28 @@ export function IdentitiesPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-fg">{d.name}</span>
-                  <Badge tone="primary">{platformCategoryLabel(d.category)}</Badge>
-                  <StatusPill tone={d.status === 0 ? 'success' : d.status === 1 ? 'neutral' : 'warning'}>{IDENTITY_STATUS[d.status] ?? d.status}</StatusPill>
+                  <Badge tone="primary">{platformCategoryLabel(d.category, t)}</Badge>
+                  <StatusPill tone={d.status === 0 ? 'success' : d.status === 1 ? 'neutral' : 'warning'}>{IDENTITY_STATUS[d.status] ? t(IDENTITY_STATUS[d.status]) : d.status}</StatusPill>
                 </div>
                 <div className="mt-0.5 truncate text-xs text-muted">
-                  {d.platform_name || 'Unknown platform'}
+                  {d.platform_name || t('ai.identities.unknownPlatform')}
                   {d.platform_domain ? ` · ${d.platform_domain}` : ''}
                   {d.identity_email ? ` · ${d.identity_email}` : ''}
                 </div>
                 {d.purpose && <div className="mt-1 text-[12.5px] text-muted text-pretty">{d.purpose}</div>}
                 {d.remark && <div className="mt-0.5 text-xs text-faint text-pretty">{d.remark}</div>}
                 <div className="mt-1 text-xs text-faint">
-                  Last active {d.last_active_at ? timeAgo(d.last_active_at) : 'never'} · Added {timeAgo(d.created_at)}
+                  {t('ai.identities.lastActive', { time: d.last_active_at ? timeAgo(d.last_active_at) : t('ai.identities.never'), added: timeAgo(d.created_at) })}
                 </div>
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button
                   size="xs"
                   onClick={() =>
-                    run('status', () => put(`/ai/identities/${d.id}`, { status: d.status === 0 ? 1 : 0 }).then(() => refresh()), d.status === 0 ? 'Identity disabled' : 'Identity enabled')
+                    run('status', () => put(`/ai/identities/${d.id}`, { status: d.status === 0 ? 1 : 0 }).then(() => refresh()), d.status === 0 ? t('ai.identities.disabledToast') : t('ai.identities.enabledToast'))
                   }
                 >
-                  {d.status === 0 ? 'Disable' : 'Enable'}
+                  {d.status === 0 ? t('ai.disable') : t('ai.enable')}
                 </Button>
                 <Button
                   size="xs"
@@ -389,10 +394,10 @@ export function IdentitiesPage() {
                     })
                   }
                 >
-                  Edit
+                  {t('ai.edit')}
                 </Button>
                 <Button size="xs" variant="danger" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setDeleting(d)}>
-                  Delete
+                  {t('ai.delete')}
                 </Button>
               </div>
             </div>
@@ -404,52 +409,52 @@ export function IdentitiesPage() {
         <Dialog
           open
           onClose={() => setEditing(null)}
-          title={editing.id === null ? 'Add identity' : 'Edit identity'}
+          title={editing.id === null ? t('ai.identities.add') : t('ai.identities.editTitle')}
           footer={
             <>
-              <Button onClick={() => setEditing(null)}>Cancel</Button>
+              <Button onClick={() => setEditing(null)}>{t('ai.cancel')}</Button>
               <Button variant="primary" loading={busy === 'save'} onClick={save} disabled={!editing.form.name.trim()}>
-                {editing.id === null ? 'Add identity' : 'Save changes'}
+                {editing.id === null ? t('ai.identities.add') : t('ai.saveChanges')}
               </Button>
             </>
           }
         >
           <div className="grid gap-4">
-            <Field label="Name">
+            <Field label={t('ai.field.name')}>
               <Input value={editing.form.name} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, name: e.target.value } })} placeholder="GitHub" autoFocus />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Platform">
+              <Field label={t('ai.field.platform')}>
                 <Input value={editing.form.platformName} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, platformName: e.target.value } })} placeholder="GitHub" />
               </Field>
-              <Field label="Platform domain">
+              <Field label={t('ai.field.platformDomain')}>
                 <Input value={editing.form.platformDomain} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, platformDomain: e.target.value } })} placeholder="github.com" />
               </Field>
-              <Field label="Category">
+              <Field label={t('ai.field.category')}>
                 <Select value={editing.form.category} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, category: e.target.value } })}>
                   {AI_PLATFORM_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
-                      {platformCategoryLabel(c)}
+                      {platformCategoryLabel(c, t)}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Identity email">
+              <Field label={t('ai.field.identityEmail')}>
                 <Input type="email" value={editing.form.identityEmail} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, identityEmail: e.target.value } })} placeholder="me@example.com" />
               </Field>
             </div>
-            <Field label="Purpose">
-              <Input value={editing.form.purpose} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, purpose: e.target.value } })} placeholder="What is this account for?" />
+            <Field label={t('ai.field.purpose')}>
+              <Input value={editing.form.purpose} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, purpose: e.target.value } })} placeholder={t('ai.field.purposePlaceholder')} />
             </Field>
-            <Field label="Remark">
-              <Textarea value={editing.form.remark} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, remark: e.target.value } })} placeholder="Notes about this identity" />
+            <Field label={t('ai.field.remark')}>
+              <Textarea value={editing.form.remark} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, remark: e.target.value } })} placeholder={t('ai.field.remarkPlaceholder')} />
             </Field>
             {editing.id !== null && (
-              <Field label="Status">
+              <Field label={t('ai.field.status')}>
                 <Select value={editing.form.status} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, status: Number(e.target.value) } })}>
                   {IDENTITY_STATUS.map((label, i) => (
                     <option key={label} value={i}>
-                      {label}
+                      {t(label)}
                     </option>
                   ))}
                 </Select>
@@ -461,16 +466,16 @@ export function IdentitiesPage() {
       <ConfirmDialog
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Delete this identity?"
-        confirmLabel="Delete"
+        title={t('ai.identities.deleteTitle')}
+        confirmLabel={t('ai.delete')}
         danger
         loading={busy === 'delete'}
         onConfirm={() => {
           if (!deleting) return;
-          run('delete', () => del(`/ai/identities/${deleting.id}`).then(() => refresh()), 'Identity deleted').then(() => setDeleting(null));
+          run('delete', () => del(`/ai/identities/${deleting.id}`).then(() => refresh()), t('ai.identities.deletedToast')).then(() => setDeleting(null));
         }}
       >
-        {deleting?.name} will be removed. This cannot be undone.
+        {deleting ? t('ai.identities.deleteBody', { name: deleting.name }) : ''}
       </ConfirmDialog>
     </div>
   );
@@ -479,6 +484,7 @@ export function IdentitiesPage() {
 // --- Analysis ----------------------------------------------------------------------------------
 
 export function AnalysisPage() {
+  const t = useT();
   const [category, setCategory] = useState('');
   const [confirming, setConfirming] = useState<AnalysisItem | null>(null);
   const [confirmForm, setConfirmForm] = useState({ name: '', category: 'other', purpose: '', remark: '' });
@@ -497,8 +503,8 @@ export function AnalysisPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Analysis"
-        description="What the AI learned from your mail — registrations, verifications, bills and security notices."
+        title={t('ai.analysis.title')}
+        description={t('ai.analysis.description')}
         actions={
           <Button
             variant="primary"
@@ -512,11 +518,11 @@ export function AnalysisPage() {
                   await invalidate(['ai', 'analysis']);
                   return r;
                 },
-                'Batch analysis finished',
+                t('ai.analysis.batchFinishedToast'),
               )
             }
           >
-            Batch analyze
+            {t('ai.analysis.batchAnalyze')}
           </Button>
         }
       />
@@ -524,7 +530,7 @@ export function AnalysisPage() {
         <div className="flex flex-wrap gap-2">
           {stats.data.map((s) => (
             <button key={s.category} type="button" onClick={() => setCategory(category === s.category ? '' : s.category)} className={cn('rounded-full border px-3 py-1 text-xs font-medium transition-colors', category === s.category ? 'border-primary bg-primary-soft text-primary-text' : 'border-border bg-surface text-muted hover:text-fg')}>
-              {categoryLabel(s.category)} · {s.total}
+              {categoryLabel(s.category, t)} · {s.total}
             </button>
           ))}
         </div>
@@ -532,15 +538,15 @@ export function AnalysisPage() {
 
       {newOnes.data && newOnes.data.length > 0 && (
         <Card>
-          <CardHeader icon={<Fingerprint />} title="New identities to confirm" description="The AI found these platforms in your mail. Confirm them to add them to your identities." />
+          <CardHeader icon={<Fingerprint />} title={t('ai.analysis.newIdentitiesTitle')} description={t('ai.analysis.newIdentitiesDesc')} />
           {newOnes.data.map((a) => (
             <div key={a.id} className={row}>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-fg">{a.platform_name || a.subject}</span>
                   {a.platform_domain && <span className="text-xs text-muted">{a.platform_domain}</span>}
-                  <Badge tone="primary">{platformCategoryLabel(a.platform_category)}</Badge>
-                  <Badge tone="neutral">{Math.round(a.confidence * 100)}% sure</Badge>
+                  <Badge tone="primary">{platformCategoryLabel(a.platform_category, t)}</Badge>
+                  <Badge tone="neutral">{t('ai.analysis.percentSure', { percent: Math.round(a.confidence * 100) })}</Badge>
                 </div>
                 <div className="mt-0.5 truncate text-xs text-muted">
                   {a.from_addr} · {a.subject}
@@ -548,7 +554,7 @@ export function AnalysisPage() {
                 {a.summary && <div className="mt-1 text-[12.5px] text-muted text-pretty">{a.summary}</div>}
               </div>
               <Button size="xs" variant="primary" onClick={() => openConfirm(a)}>
-                Confirm
+                {t('ai.confirm')}
               </Button>
             </div>
           ))}
@@ -557,23 +563,23 @@ export function AnalysisPage() {
 
       <Card>
         <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3.5">
-          <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-auto" aria-label="Filter by category">
-            <option value="">All categories</option>
+          <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-auto" aria-label={t('ai.filterByCategory')}>
+            <option value="">{t('ai.filter.allCategories')}</option>
             {AI_CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {categoryLabel(c)}
+                {categoryLabel(c, t)}
               </option>
             ))}
           </Select>
           <Button size="xs" variant="ghost" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={() => list.refetch()}>
-            Refresh
+            {t('ai.refresh')}
           </Button>
         </div>
         {list.isLoading ? (
           <PageSpinner />
         ) : !list.data?.length ? (
-          <EmptyState icon={<MailSearch />} title="No analysis yet.">
-            Use “Batch analyze” to classify your recent mail.
+          <EmptyState icon={<MailSearch />} title={t('ai.analysis.emptyTitle')}>
+            {t('ai.analysis.emptyBody')}
           </EmptyState>
         ) : (
           list.data.map((a) => <AnalysisRow key={a.id} a={a} />)
@@ -584,11 +590,11 @@ export function AnalysisPage() {
         <Dialog
           open
           onClose={() => setConfirming(null)}
-          title="Confirm new identity"
+          title={t('ai.analysis.confirmTitle')}
           description={`${confirming.platform_name || confirming.subject}${confirming.platform_domain ? ` · ${confirming.platform_domain}` : ''}`}
           footer={
             <>
-              <Button onClick={() => setConfirming(null)}>Cancel</Button>
+              <Button onClick={() => setConfirming(null)}>{t('ai.cancel')}</Button>
               <Button
                 variant="primary"
                 loading={busy === 'confirm'}
@@ -603,29 +609,29 @@ export function AnalysisPage() {
                   )
                 }
               >
-                Confirm identity
+                {t('ai.analysis.confirmIdentity')}
               </Button>
             </>
           }
         >
           <div className="grid gap-4">
-            <Field label="Name">
+            <Field label={t('ai.field.name')}>
               <Input value={confirmForm.name} onChange={(e) => setConfirmForm({ ...confirmForm, name: e.target.value })} autoFocus />
             </Field>
-            <Field label="Category">
+            <Field label={t('ai.field.category')}>
               <Select value={confirmForm.category} onChange={(e) => setConfirmForm({ ...confirmForm, category: e.target.value })}>
                 {AI_PLATFORM_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {platformCategoryLabel(c)}
+                    {platformCategoryLabel(c, t)}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label="Purpose">
-              <Input value={confirmForm.purpose} onChange={(e) => setConfirmForm({ ...confirmForm, purpose: e.target.value })} placeholder="What is this account for?" />
+            <Field label={t('ai.field.purpose')}>
+              <Input value={confirmForm.purpose} onChange={(e) => setConfirmForm({ ...confirmForm, purpose: e.target.value })} placeholder={t('ai.field.purposePlaceholder')} />
             </Field>
-            <Field label="Remark">
-              <Textarea value={confirmForm.remark} onChange={(e) => setConfirmForm({ ...confirmForm, remark: e.target.value })} placeholder="Notes about this identity" />
+            <Field label={t('ai.field.remark')}>
+              <Textarea value={confirmForm.remark} onChange={(e) => setConfirmForm({ ...confirmForm, remark: e.target.value })} placeholder={t('ai.field.remarkPlaceholder')} />
             </Field>
           </div>
         </Dialog>
@@ -635,15 +641,16 @@ export function AnalysisPage() {
 }
 
 function AnalysisRow({ a }: { a: AnalysisItem }) {
+  const t = useT();
   const keyInfo = Object.entries(a.key_info ?? {}).filter(([, v]) => v !== '' && v !== null && v !== undefined);
   return (
     <div className={row}>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-fg">{a.subject || '(no subject)'}</span>
-          <Badge tone={a.category === 'security' ? 'danger' : 'primary'}>{categoryLabel(a.category)}</Badge>
-          {a.is_new_identity === 1 && <Badge tone="warning">New identity</Badge>}
-          <span className="text-xs text-faint">{Math.round(a.confidence * 100)}% sure</span>
+          <span className="font-medium text-fg">{a.subject || t('ai.analysis.noSubject')}</span>
+          <Badge tone={a.category === 'security' ? 'danger' : 'primary'}>{categoryLabel(a.category, t)}</Badge>
+          {a.is_new_identity === 1 && <Badge tone="warning">{t('ai.analysis.newIdentityBadge')}</Badge>}
+          <span className="text-xs text-faint">{t('ai.analysis.percentSure', { percent: Math.round(a.confidence * 100) })}</span>
         </div>
         <div className="mt-0.5 truncate text-xs text-muted">
           {a.from_addr}
@@ -670,6 +677,7 @@ function AnalysisRow({ a }: { a: AnalysisItem }) {
 // --- Digests -----------------------------------------------------------------------------------
 
 export function DigestsPage() {
+  const t = useT();
   const { run, busy } = useAction();
   const invalidate = useInvalidate();
   const list = useQuery({ queryKey: ['ai', 'digests'], queryFn: () => get<Digest[]>('/ai/digests?limit=20') });
@@ -678,8 +686,8 @@ export function DigestsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Digests"
-        description="A daily AI summary of what mattered in your mail, with the important messages called out."
+        title={t('ai.digests.title')}
+        description={t('ai.digests.description')}
         actions={
           <Button
             variant="primary"
@@ -691,14 +699,14 @@ export function DigestsPage() {
                 async () => {
                   const r = await post<Digest | { generated: false }>(`/ai/digests/generate?date=${today}`);
                   await invalidate(['ai', 'digests']);
-                  if ('generated' in r && r.generated === false) throw new Error('No digest was generated — there may be nothing new to summarize, or AI is off.');
+                  if ('generated' in r && r.generated === false) throw new Error(t('ai.digests.noDigestError'));
                   return r;
                 },
-                'Digest generated',
+                t('ai.digests.generatedToast'),
               )
             }
           >
-            Generate today’s digest
+            {t('ai.digests.generateToday')}
           </Button>
         }
       />
@@ -706,8 +714,8 @@ export function DigestsPage() {
         <PageSpinner />
       ) : !list.data?.length ? (
         <Card>
-          <EmptyState icon={<Newspaper />} title="No digests yet.">
-            Generate today’s digest to get a summary of your recent mail.
+          <EmptyState icon={<Newspaper />} title={t('ai.digests.emptyTitle')}>
+            {t('ai.digests.emptyBody')}
           </EmptyState>
         </Card>
       ) : (
@@ -716,7 +724,7 @@ export function DigestsPage() {
             <CardHeader
               icon={<Newspaper />}
               title={d.digest_date}
-              description={`${d.important_count} important ${d.important_count === 1 ? 'message' : 'messages'} · ${timeAgo(d.created_at)}`}
+              description={t('ai.digests.importantCount', { n: d.important_count, s: d.important_count === 1 ? '' : 's', time: timeAgo(d.created_at) })}
             />
             <div className="px-5 py-4 text-[13.5px] leading-relaxed whitespace-pre-wrap text-fg/90">{d.content}</div>
           </Card>
@@ -729,6 +737,7 @@ export function DigestsPage() {
 // --- Security ----------------------------------------------------------------------------------
 
 export function SecurityPage() {
+  const t = useT();
   const [riskLevel, setRiskLevel] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const { run, busy } = useAction();
@@ -742,22 +751,22 @@ export function SecurityPage() {
   const stats = useQuery({ queryKey: ['ai', 'security', 'stats'], queryFn: () => get<SecurityStats>('/ai/security/stats') });
 
   const setStatus = (id: number, status: number) =>
-    run('status', () => put(`/ai/security/${id}/status`, { status }).then(() => invalidate(['ai', 'security'])), 'Status updated');
+    run('status', () => put(`/ai/security/${id}/status`, { status }).then(() => invalidate(['ai', 'security'])), t('ai.security.statusUpdatedToast'));
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Security" description="Password changes, unusual logins and data breaches the AI spotted in your mail." />
+      <PageHeader title={t('ai.security.title')} description={t('ai.security.description')} />
       {stats.data && (
         <div className="grid grid-cols-3 gap-3">
           {(
             [
-              ['Total events', stats.data.total, 'neutral'],
-              ['Unprocessed', stats.data.unprocessed, stats.data.unprocessed > 0 ? 'warning' : 'success'],
-              ['High risk, unprocessed', stats.data.highRisk, stats.data.highRisk > 0 ? 'danger' : 'success'],
+              ['ai.security.totalEvents', stats.data.total, 'neutral'],
+              ['ai.security.unprocessed', stats.data.unprocessed, stats.data.unprocessed > 0 ? 'warning' : 'success'],
+              ['ai.security.highRiskUnprocessed', stats.data.highRisk, stats.data.highRisk > 0 ? 'danger' : 'success'],
             ] as const
           ).map(([label, value, tone]) => (
             <Card key={label} className="px-4 py-3.5">
-              <div className="text-[12.5px] text-muted">{label}</div>
+              <div className="text-[12.5px] text-muted">{t(label)}</div>
               <div className={cn('mt-1 text-2xl leading-tight font-semibold tabular-nums', tone === 'danger' ? 'text-danger' : tone === 'warning' ? 'text-warning' : '')}>{value}</div>
             </Card>
           ))}
@@ -765,17 +774,17 @@ export function SecurityPage() {
       )}
       <Card>
         <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3.5">
-          <Select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)} className="w-auto" aria-label="Filter by risk level">
-            <option value="">All risk levels</option>
-            <option value="2">High risk</option>
-            <option value="1">Medium risk</option>
-            <option value="0">Low risk</option>
+          <Select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)} className="w-auto" aria-label={t('ai.filterByRisk')}>
+            <option value="">{t('ai.filter.allRiskLevels')}</option>
+            <option value="2">{t('ai.risk.high')}</option>
+            <option value="1">{t('ai.risk.medium')}</option>
+            <option value="0">{t('ai.risk.low')}</option>
           </Select>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-auto" aria-label="Filter by status">
-            <option value="">All statuses</option>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-auto" aria-label={t('ai.filterByStatus')}>
+            <option value="">{t('ai.filter.allStatuses')}</option>
             {SECURITY_STATUS_LABELS.map((label, i) => (
               <option key={label} value={i}>
-                {label}
+                {t(label)}
               </option>
             ))}
           </Select>
@@ -783,8 +792,8 @@ export function SecurityPage() {
         {list.isLoading ? (
           <PageSpinner />
         ) : !list.data?.length ? (
-          <EmptyState icon={<ShieldAlert />} title="No security events.">
-            The AI will flag password changes, unusual logins and breaches here.
+          <EmptyState icon={<ShieldAlert />} title={t('ai.security.emptyTitle')}>
+            {t('ai.security.emptyBody')}
           </EmptyState>
         ) : (
           list.data.map((ev) => (
@@ -792,9 +801,9 @@ export function SecurityPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-fg">{ev.title}</span>
-                  <Badge tone={riskTone(ev.risk_level)}>{riskLabel(ev.risk_level)}</Badge>
-                  <Badge tone="neutral">{SECURITY_TYPE_LABELS[ev.type] ?? ev.type}</Badge>
-                  <StatusPill tone={ev.status === 0 ? 'warning' : ev.status === 3 ? 'success' : 'neutral'}>{SECURITY_STATUS_LABELS[ev.status] ?? ev.status}</StatusPill>
+                  <Badge tone={riskTone(ev.risk_level)}>{riskLabel(ev.risk_level, t)}</Badge>
+                  <Badge tone="neutral">{SECURITY_TYPE_LABELS[ev.type] ? t(SECURITY_TYPE_LABELS[ev.type]) : ev.type}</Badge>
+                  <StatusPill tone={ev.status === 0 ? 'warning' : ev.status === 3 ? 'success' : 'neutral'}>{SECURITY_STATUS_LABELS[ev.status] ? t(SECURITY_STATUS_LABELS[ev.status]) : ev.status}</StatusPill>
                 </div>
                 <div className="mt-0.5 truncate text-xs text-muted">
                   {ev.from_addr} · {ev.subject}
@@ -807,16 +816,16 @@ export function SecurityPage() {
                 {ev.status === 0 && (
                   <>
                     <Button size="xs" loading={busy === 'status'} onClick={() => setStatus(ev.id, 1)}>
-                      Confirm
+                      {t('ai.confirm')}
                     </Button>
                     <Button size="xs" loading={busy === 'status'} onClick={() => setStatus(ev.id, 2)}>
-                      Ignore
+                      {t('ai.ignore')}
                     </Button>
                   </>
                 )}
                 {ev.status !== 3 && (
                   <Button size="xs" variant="primary" loading={busy === 'status'} onClick={() => setStatus(ev.id, 3)}>
-                    Resolve
+                    {t('ai.resolve')}
                   </Button>
                 )}
               </div>
@@ -838,6 +847,7 @@ interface ChatMessage {
 }
 
 export function AssistantPage() {
+  const t = useT();
   const status = useAiStatus();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -861,13 +871,13 @@ export function AssistantPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Assistant" description="Ask about your digital identities, your mail and your security — the assistant knows what you have signed up for." />
-      {status.data && !status.data.enabled && <Alert tone="warning" title="AI is off.">Turn it on in AI settings before chatting.</Alert>}
+      <PageHeader title={t('ai.assistant.title')} description={t('ai.assistant.description')} />
+      {status.data && !status.data.enabled && <Alert tone="warning" title={t('ai.assistant.aiOffTitle')}>{t('ai.assistant.aiOffBody')}</Alert>}
       <Card className="flex min-h-[420px] flex-col">
         <div className="flex flex-1 flex-col gap-3 px-5 py-4">
           {messages.length === 0 ? (
-            <EmptyState icon={<Bot />} title="Ask the assistant anything.">
-              For example: “Which accounts use my work email?” or “Any security alerts I should check?”
+            <EmptyState icon={<Bot />} title={t('ai.assistant.emptyTitle')}>
+              {t('ai.assistant.emptyBody')}
             </EmptyState>
           ) : (
             messages.map((m, i) => (
@@ -876,18 +886,18 @@ export function AssistantPage() {
                 {m.role === 'assistant' && m.provider && (
                   <div className="mt-1.5 text-[11.5px] text-faint">
                     {m.provider}
-                    {m.fallback ? ' · fallback provider' : ''}
+                    {m.fallback ? t('ai.assistant.fallbackProvider') : ''}
                   </div>
                 )}
               </div>
             ))
           )}
-          {sending && <div className="self-start text-[13px] text-muted">Thinking…</div>}
+          {sending && <div className="self-start text-[13px] text-muted">{t('ai.assistant.thinking')}</div>}
         </div>
         <form onSubmit={send} className="flex gap-2 border-t border-border px-5 py-3.5">
-          <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about your identities, mail or security…" aria-label="Message the assistant" disabled={status.data && !status.data.enabled} />
+          <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder={t('ai.assistant.inputPlaceholder')} aria-label={t('ai.assistant.inputAria')} disabled={status.data && !status.data.enabled} />
           <Button type="submit" variant="primary" icon={<Send className="h-[15px] w-[15px]" />} loading={sending} disabled={!input.trim()}>
-            Send
+            {t('ai.send')}
           </Button>
         </form>
       </Card>
@@ -898,6 +908,7 @@ export function AssistantPage() {
 // --- Settings (admin only) ---------------------------------------------------------------------
 
 export function AiSettingsPage() {
+  const t = useT();
   const isAdmin = useIsAdmin();
   const q = useQuery({ queryKey: ['ai', 'settings'], queryFn: () => get<AiSettings>('/ai/settings'), enabled: isAdmin });
   const [s, setS] = useState<AiSettings | null>(null);
@@ -914,32 +925,32 @@ export function AiSettingsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="AI settings" description="Turn the AI on, pick the inference provider and set the API key for DeepSeek or a custom endpoint." />
+      <PageHeader title={t('ai.settings.title')} description={t('ai.settings.description')} />
       <Card>
-        <CardHeader icon={<Settings />} title="AI" description="Analysis, identity discovery, digests and the assistant all use these settings." />
+        <CardHeader icon={<Settings />} title="AI" description={t('ai.settings.cardDesc')} />
         <div className="grid gap-x-6 gap-y-[18px] px-5 pt-[18px] pb-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-[13px] font-medium text-fg">Enable AI</div>
-              <div className="text-xs text-muted">When off, no mail is analyzed and the assistant refuses to chat.</div>
+              <div className="text-[13px] font-medium text-fg">{t('ai.settings.enableAi')}</div>
+              <div className="text-xs text-muted">{t('ai.settings.enableAiDesc')}</div>
             </div>
-            <Switch checked={s.aiEnabled === 'on'} onChange={(v) => setS({ ...s, aiEnabled: v ? 'on' : 'off' })} label="Enable AI" />
+            <Switch checked={s.aiEnabled === 'on'} onChange={(v) => setS({ ...s, aiEnabled: v ? 'on' : 'off' })} label={t('ai.settings.enableAi')} />
           </div>
-          <Field label="Provider" hint={s.aiProvider === 'workers' ? 'Cloudflare Workers AI (free tier). Falls back to the API key below if the binding is missing or fails.' : 'Calls an OpenAI-compatible chat-completions endpoint with the API key below.'}>
+          <Field label={t('ai.settings.provider')} hint={s.aiProvider === 'workers' ? t('ai.settings.providerHintWorkers') : t('ai.settings.providerHintOther')}>
             <Select value={s.aiProvider} onChange={(e) => setS({ ...s, aiProvider: e.target.value as AiSettings['aiProvider'] })}>
               <option value="workers">Workers AI</option>
               <option value="deepseek">DeepSeek</option>
-              <option value="custom">Custom (OpenAI-compatible)</option>
+              <option value="custom">{t('ai.settings.providerCustom')}</option>
             </Select>
           </Field>
-          <Field label="Model" hint={s.aiProvider === 'workers' ? 'Workers AI model id, e.g. @cf/meta/llama-4-scout-17b-16e-instruct.' : 'Model name for the OpenAI-compatible endpoint.'}>
+          <Field label={t('ai.settings.model')} hint={s.aiProvider === 'workers' ? t('ai.settings.modelHintWorkers') : t('ai.settings.modelHintOther')}>
             <Input value={s.aiModel} onChange={(e) => setS({ ...s, aiModel: e.target.value })} placeholder="deepseek-chat" />
           </Field>
-          <Field label="API base URL" hint="Base URL of the OpenAI-compatible endpoint. Not used by Workers AI unless it falls back.">
+          <Field label={t('ai.settings.apiBaseUrl')} hint={t('ai.settings.apiBaseUrlHint')}>
             <Input value={s.aiBaseUrl} onChange={(e) => setS({ ...s, aiBaseUrl: e.target.value })} placeholder="https://api.deepseek.com" />
           </Field>
-          <Field label="API key" hint={s.hasApiKey ? 'A key is already stored. Leave blank to keep it, or enter a new one to replace it.' : 'No key stored yet. Required for DeepSeek / custom providers.'}>
-            <PasswordInput value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={s.hasApiKey ? '•••••••• (unchanged)' : 'sk-…'} autoComplete="off" />
+          <Field label={t('ai.settings.apiKey')} hint={s.hasApiKey ? t('ai.settings.apiKeyHintStored') : t('ai.settings.apiKeyHintNone')}>
+            <PasswordInput value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={s.hasApiKey ? t('ai.settings.apiKeyPlaceholderStored') : 'sk-…'} autoComplete="off" />
           </Field>
         </div>
         <div className="flex justify-end border-t border-border px-5 py-3">
@@ -955,11 +966,11 @@ export function AiSettingsPage() {
                   setApiKey('');
                   await invalidate(['ai', 'settings'], ['ai', 'status']);
                 },
-                'AI settings saved',
+                t('ai.settings.savedToast'),
               )
             }
           >
-            Save changes
+            {t('ai.saveChanges')}
           </Button>
         </div>
       </Card>
