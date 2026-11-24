@@ -8,6 +8,7 @@ import { useAction } from '../../lib/hooks';
 import { getCustomWallpaper, useWallpaper } from '../../lib/background';
 import { useRefreshSession, useUser } from '../../lib/session';
 import { useTheme } from '../../lib/theme';
+import { LANGUAGES, useLanguage, useT } from '../../lib/i18n';
 import { storageGet, storageSet } from '../../lib/utils';
 import { Button } from '../../components/ui/button';
 import { Field, Input, PasswordInput, SegmentedControl, Switch } from '../../components/ui/form';
@@ -17,18 +18,20 @@ import { PasswordStrength } from '../../components/PasswordStrength';
 
 // Each section is its own page in the settings sidebar.
 export function ProfileSettings() {
+  const t = useT();
   return (
     <div className="space-y-6">
-      <PageHeader title="Profile" description="Your name and sign-in email." />
+      <PageHeader title={t('settings.profileTitle')} description={t('settings.profileDesc')} />
       <Profile />
     </div>
   );
 }
 
 export function AppearanceSettings() {
+  const t = useT();
   return (
     <div className="space-y-6">
-      <PageHeader title="Appearance" description="Theme, background photo and desktop notifications for this browser." />
+      <PageHeader title={t('settings.appearanceTitle')} description={t('settings.appearanceDesc')} />
       <Appearance />
       <Background />
     </div>
@@ -36,9 +39,10 @@ export function AppearanceSettings() {
 }
 
 export function SecuritySettings() {
+  const t = useT();
   return (
     <div className="space-y-6">
-      <PageHeader title="Security" description="Your password and two-factor authentication." />
+      <PageHeader title={t('settings.security')} description={t('settings.securityDesc')} />
       <Password />
       <TwoFactor />
     </div>
@@ -46,32 +50,34 @@ export function SecuritySettings() {
 }
 
 export function DevicesSettings() {
+  const t = useT();
   return (
     <div className="space-y-6">
-      <PageHeader title="Devices" description="Browsers signed in to your account. Sign out any you don't recognize." />
+      <PageHeader title={t('settings.devicesTitle')} description={t('settings.devicesDesc')} />
       <Sessions />
     </div>
   );
 }
 
 function Profile() {
+  const t = useT();
   const user = useUser();
   const refresh = useRefreshSession();
   const [name, setName] = useState(user?.name ?? '');
   const { run, busy } = useAction();
   return (
     <Card>
-      <CardHeader title="Profile" />
+      <CardHeader title={t('settings.profileTitle')} />
       <div className="space-y-4 p-5">
-        <Field label="Name">
+        <Field label={t('settings.name')}>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Sign-in email" hint="Ask an admin to change it.">
+        <Field label={t('settings.signInEmail')} hint={t('settings.signInEmailHint')}>
           <Input value={user?.email ?? ''} disabled />
         </Field>
         <div className="flex justify-end">
-          <Button variant="primary" loading={!!busy} onClick={() => run('save', () => patch('/account', { name }).then(refresh), 'Saved')}>
-            Save
+          <Button variant="primary" loading={!!busy} onClick={() => run('save', () => patch('/account', { name }).then(refresh), t('common.saved'))}>
+            {t('common.save')}
           </Button>
         </div>
       </div>
@@ -80,7 +86,9 @@ function Profile() {
 }
 
 function Appearance() {
+  const t = useT();
   const [theme, setTheme] = useTheme();
+  const [language, setLanguage] = useLanguage();
   const [notify, setNotify] = useState(storageGet('oi.notify', false));
   const toggleNotify = async (on: boolean) => {
     if (on && 'Notification' in window && Notification.permission !== 'granted') {
@@ -92,27 +100,30 @@ function Appearance() {
   };
   return (
     <Card>
-      <CardHeader title="Theme and notifications" />
+      <CardHeader title={t('settings.themeAndNotifications')} />
       <div className="space-y-5 p-5">
-        <Field label="Theme">
+        <Field label={t('settings.theme')}>
           <SegmentedControl
             value={theme}
             onChange={setTheme}
             options={[
-              { value: 'light', label: <span className="flex items-center gap-1.5"><Sun className="h-3.5 w-3.5" />Light</span> },
-              { value: 'dark', label: <span className="flex items-center gap-1.5"><Moon className="h-3.5 w-3.5" />Dark</span> },
-              { value: 'system', label: <span className="flex items-center gap-1.5"><Monitor className="h-3.5 w-3.5" />System</span> },
+              { value: 'light', label: <span className="flex items-center gap-1.5"><Sun className="h-3.5 w-3.5" />{t('menu.light')}</span> },
+              { value: 'dark', label: <span className="flex items-center gap-1.5"><Moon className="h-3.5 w-3.5" />{t('menu.dark')}</span> },
+              { value: 'system', label: <span className="flex items-center gap-1.5"><Monitor className="h-3.5 w-3.5" />{t('menu.system')}</span> },
             ]}
           />
+        </Field>
+        <Field label={t('settings.language')} hint={t('settings.languageDesc')}>
+          <SegmentedControl value={language} onChange={setLanguage} options={LANGUAGES.map(({ value, label }) => ({ value, label }))} />
         </Field>
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm font-medium">
-              <Bell className="h-4 w-4" /> Desktop notifications
+              <Bell className="h-4 w-4" /> {t('settings.desktopNotifications')}
             </div>
-            <div className="text-xs text-muted">Notify about new inbox mail while OpenInbox is open in a background tab (this browser only).</div>
+            <div className="text-xs text-muted">{t('settings.desktopNotificationsDesc')}</div>
           </div>
-          <Switch checked={notify} onChange={toggleNotify} label="Desktop notifications" />
+          <Switch checked={notify} onChange={toggleNotify} label={t('settings.desktopNotifications')} />
         </div>
       </div>
     </Card>
@@ -120,12 +131,13 @@ function Appearance() {
 }
 
 function Background() {
+  const t = useT();
   const { url, source, title, loading, next, setCustom, clearCustom } = useWallpaper();
   const [draft, setDraft] = useState(getCustomWallpaper());
   const [saved, setSaved] = useState(false);
   return (
     <Card>
-      <CardHeader icon={<ImageIcon className="h-5 w-5" />} title="Background" description="The photo behind the glass panels. Bing's photo of the day by default, or your own image." />
+      <CardHeader icon={<ImageIcon className="h-5 w-5" />} title={t('settings.background')} description={t('settings.backgroundDesc')} />
       <div className="space-y-5 p-5">
         {url ? (
           <div className="overflow-hidden rounded-xl border border-border">
@@ -133,11 +145,11 @@ function Background() {
           </div>
         ) : (
           <div className="grid h-36 place-items-center rounded-xl border border-border bg-surface-2 text-[13px] text-muted">
-            {loading ? 'Loading today’s photo…' : 'No photo loaded — showing the fallback gradient.'}
+            {loading ? t('settings.loadingPhoto') : t('settings.noPhoto')}
           </div>
         )}
         {title && <p className="-mt-2 text-xs text-muted">{title}</p>}
-        <Field label="Custom image URL" hint="Leave empty to use the Bing daily photo.">
+        <Field label={t('settings.customImageUrl')} hint={t('settings.customImageHint')}>
           <Input value={draft} onChange={(e) => { setDraft(e.target.value); setSaved(false); }} placeholder="https://example.com/photo.jpg" inputMode="url" />
         </Field>
         <div className="flex flex-wrap gap-2">
@@ -148,7 +160,7 @@ function Background() {
               setSaved(true);
             }}
           >
-            Use this image
+            {t('settings.useThisImage')}
           </Button>
           <Button
             onClick={() => {
@@ -156,9 +168,9 @@ function Background() {
               setSaved(false);
             }}
             disabled={source === 'custom'}
-            title={source === 'custom' ? 'Clear the custom image first' : 'Show another recent Bing photo'}
+            title={source === 'custom' ? t('settings.clearCustomFirst') : t('settings.shuffleBingTitle')}
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Shuffle Bing photo
+            <RefreshCw className="h-3.5 w-3.5" /> {t('settings.shuffleBing')}
           </Button>
           {source === 'custom' && (
             <Button
@@ -168,17 +180,18 @@ function Background() {
                 setSaved(false);
               }}
             >
-              Back to Bing daily
+              {t('settings.backToBing')}
             </Button>
           )}
         </div>
-        {saved && <p className="text-xs text-success">Saved — this image is now your background.</p>}
+        {saved && <p className="text-xs text-success">{t('settings.backgroundSaved')}</p>}
       </div>
     </Card>
   );
 }
 
 function Password() {
+  const t = useT();
   const user = useUser();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -186,30 +199,30 @@ function Password() {
   const { run, busy } = useAction();
   return (
     <Card>
-      <CardHeader icon={<KeyRound className="h-5 w-5" />} title="Password" description="Changing it signs out your other devices." />
+      <CardHeader icon={<KeyRound className="h-5 w-5" />} title={t('settings.passwordTitle')} description={t('settings.passwordDesc')} />
       <form
         className="space-y-4 p-5"
         onSubmit={(e) => {
           e.preventDefault();
           if (next !== confirm) return;
-          run('pw', () => post('/account/password', { current, next }).then(() => { setCurrent(''); setNext(''); setConfirm(''); }), 'Password changed');
+          run('pw', () => post('/account/password', { current, next }).then(() => { setCurrent(''); setNext(''); setConfirm(''); }), t('settings.passwordChanged'));
         }}
       >
-        <Field label="Current password">
+        <Field label={t('settings.currentPassword')}>
           <PasswordInput value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required={!user?.mustChangePassword} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="New password">
+          <Field label={t('settings.newPassword')}>
             <PasswordInput value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" required minLength={10} />
           </Field>
-          <Field label="Confirm" error={confirm && next !== confirm ? 'Does not match' : undefined}>
+          <Field label={t('settings.confirm')} error={confirm && next !== confirm ? t('settings.doesNotMatch') : undefined}>
             <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
           </Field>
         </div>
         <PasswordStrength password={next} />
         <div className="flex justify-end">
           <Button type="submit" variant="primary" loading={!!busy}>
-            Change password
+            {t('settings.changePassword')}
           </Button>
         </div>
       </form>
@@ -218,6 +231,7 @@ function Password() {
 }
 
 function TwoFactor() {
+  const t = useT();
   const user = useUser();
   const refresh = useRefreshSession();
   const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
@@ -231,25 +245,25 @@ function TwoFactor() {
     <Card>
       <CardHeader
         icon={<Shield className="h-5 w-5" />}
-        title="Two-factor authentication"
-        description="Ask for a code from an authenticator app when signing in."
-        action={user?.totpEnabled ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>}
+        title={t('settings.twoFactorTitle')}
+        description={t('settings.twoFactorDesc')}
+        action={user?.totpEnabled ? <Badge tone="success">{t('settings.on')}</Badge> : <Badge>{t('settings.off')}</Badge>}
       />
       <div className="p-5">
         {user?.totpEnabled ? (
           <Button variant="outline" onClick={() => setDisable(true)}>
-            Turn off
+            {t('settings.turnOff')}
           </Button>
         ) : (
           <Button variant="primary" loading={busy === 'start'} onClick={() => run('start', async () => setSetup(await post<{ secret: string; uri: string }>('/account/2fa/setup')))}>
-            Set up two-factor
+            {t('settings.setUpTwoFactor')}
           </Button>
         )}
       </div>
       <Dialog
         open={!!setup && !codes}
         onClose={() => setSetup(null)}
-        title="Scan with your authenticator app"
+        title={t('settings.scanApp')}
         footer={
           <Button
             variant="primary"
@@ -266,7 +280,7 @@ function TwoFactor() {
               })
             }
           >
-            Verify and turn on
+            {t('settings.verifyAndTurnOn')}
           </Button>
         }
       >
@@ -274,10 +288,10 @@ function TwoFactor() {
           <div className="space-y-4">
             <div className="mx-auto w-48 rounded-lg bg-white p-2" dangerouslySetInnerHTML={{ __html: renderSVG(setup.uri, { border: 1 }) }} />
             <div className="text-center text-xs text-muted">
-              Or enter this key: <span className="font-mono text-fg">{setup.secret.match(/.{1,4}/g)?.join(' ')}</span> <CopyButton text={setup.secret} />
+              {t('settings.orEnterKey')} <span className="font-mono text-fg">{setup.secret.match(/.{1,4}/g)?.join(' ')}</span> <CopyButton text={setup.secret} />
             </div>
             {error && <Alert tone="danger">{error}</Alert>}
-            <Field label="6-digit code from the app">
+            <Field label={t('settings.sixDigitCode')}>
               <Input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" className="text-center font-mono text-lg tracking-widest" autoFocus />
             </Field>
           </div>
@@ -290,8 +304,8 @@ function TwoFactor() {
           setSetup(null);
           refresh();
         }}
-        title="Save your recovery codes"
-        description="Each code signs you in once if you lose your phone. They won't be shown again."
+        title={t('settings.saveRecoveryCodes')}
+        description={t('settings.recoveryCodesDesc')}
         footer={
           <Button
             variant="primary"
@@ -301,7 +315,7 @@ function TwoFactor() {
               refresh();
             }}
           >
-            I saved them
+            {t('settings.iSavedThem')}
           </Button>
         }
       >
@@ -309,21 +323,21 @@ function TwoFactor() {
           {codes?.map((c) => <span key={c}>{c}</span>)}
         </div>
         <div className="mt-2 flex justify-end">
-          <CopyButton text={(codes ?? []).join('\n')} label="Copy all" />
+          <CopyButton text={(codes ?? []).join('\n')} label={t('settings.copyAll')} />
         </div>
       </Dialog>
       <Dialog
         open={disable}
         onClose={() => setDisable(false)}
-        title="Turn off two-factor?"
+        title={t('settings.turnOffTwoFactor')}
         size="sm"
         footer={
-          <Button variant="danger" loading={busy === 'disable'} onClick={() => run('disable', () => post('/account/2fa/disable', { current: password }).then(() => { setDisable(false); setPassword(''); refresh(); }), 'Two-factor turned off')}>
-            Turn off
+          <Button variant="danger" loading={busy === 'disable'} onClick={() => run('disable', () => post('/account/2fa/disable', { current: password }).then(() => { setDisable(false); setPassword(''); refresh(); }), t('settings.twoFactorOff'))}>
+            {t('settings.turnOff')}
           </Button>
         }
       >
-        <Field label="Your password">
+        <Field label={t('settings.yourPassword')}>
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
         </Field>
       </Dialog>
@@ -332,10 +346,11 @@ function TwoFactor() {
 }
 
 function Sessions() {
+  const t = useT();
   const q = useQuery({ queryKey: ['sessions'], queryFn: () => get<{ id: string; ip: string | null; userAgent: string | null; createdAt: number; lastSeenAt: number; current: boolean }[]>('/account/sessions') });
   const { run } = useAction();
   const describe = (ua: string | null) => {
-    if (!ua) return 'Unknown device';
+    if (!ua) return t('settings.unknownDevice');
     const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
     const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'macOS' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : '';
     return `${browser}${os ? ` on ${os}` : ''}`;
@@ -345,11 +360,11 @@ function Sessions() {
     <Card>
       <CardHeader
         icon={<Laptop className="h-5 w-5" />}
-        title="Signed-in devices"
+        title={t('settings.signedInDevices')}
         action={
           (q.data?.length ?? 0) > 1 && (
-            <Button size="sm" onClick={() => run('all', () => post('/account/sessions/revoke-others').then(() => q.refetch()), 'Signed out everywhere else')}>
-              Sign out others
+            <Button size="sm" onClick={() => run('all', () => post('/account/sessions/revoke-others').then(() => q.refetch()), t('settings.signedOutElsewhere'))}>
+              {t('settings.signOutOthers')}
             </Button>
           )
         }
@@ -359,15 +374,15 @@ function Sessions() {
           <div key={s.id} className="flex items-center gap-3 px-5 py-3">
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">
-                {describe(s.userAgent)} {s.current && <Badge tone="success">This device</Badge>}
+                {describe(s.userAgent)} {s.current && <Badge tone="success">{t('settings.thisDevice')}</Badge>}
               </div>
               <div className="text-xs text-muted">
-                {s.ip ?? 'unknown IP'} · active {timeAgo(s.lastSeenAt)} · signed in {timeAgo(s.createdAt)}
+                {s.ip ?? t('settings.unknownIp')} · {t('settings.activeAgo', { time: timeAgo(s.lastSeenAt) })} · {t('settings.signedInAgo', { time: timeAgo(s.createdAt) })}
               </div>
             </div>
             {!s.current && (
               <Button size="xs" variant="ghost" icon={<Trash className="h-3.5 w-3.5" />} onClick={() => run('rm', () => del(`/account/sessions/${s.id}`).then(() => q.refetch()))}>
-                Sign out
+                {t('settings.signOut')}
               </Button>
             )}
           </div>

@@ -3,12 +3,13 @@ import { CalendarClock, Download, Forward, Funnel, MonitorSmartphone, Palette, P
 import { cn } from '../../lib/utils';
 import { AppearanceSettings, DevicesSettings, ProfileSettings, SecuritySettings } from './AccountSettings';
 import { MAIL_SECTIONS, MailboxSettings, type MailSection } from './MailboxSettings';
+import { useT } from '../../lib/i18n';
 
 const ACCOUNT = [
-  { to: 'profile', label: 'Profile', Icon: UserRound, element: <ProfileSettings /> },
-  { to: 'appearance', label: 'Appearance', Icon: Palette, element: <AppearanceSettings /> },
-  { to: 'security', label: 'Security', Icon: ShieldCheck, element: <SecuritySettings /> },
-  { to: 'devices', label: 'Devices', Icon: MonitorSmartphone, element: <DevicesSettings /> },
+  { to: 'profile', label: 'settings.profile', Icon: UserRound, element: <ProfileSettings /> },
+  { to: 'appearance', label: 'settings.appearance', Icon: Palette, element: <AppearanceSettings /> },
+  { to: 'security', label: 'settings.security', Icon: ShieldCheck, element: <SecuritySettings /> },
+  { to: 'devices', label: 'settings.devices', Icon: MonitorSmartphone, element: <DevicesSettings /> },
 ];
 
 const MAIL_ICONS: Record<MailSection, typeof UserRound> = {
@@ -23,6 +24,7 @@ const MAIL_ICONS: Record<MailSection, typeof UserRound> = {
 export default function SettingsPage() {
   // Mail sections keep the chosen inbox (?inbox=) when switching between them.
   const { search } = useLocation();
+  const t = useT();
   const link = (to: string, label: string, Icon: typeof UserRound, keep = '') => (
     <NavLink
       key={to}
@@ -43,10 +45,10 @@ export default function SettingsPage() {
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <aside className="shrink-0 border-b border-border bg-bg md:w-[232px] md:border-r md:border-b-0">
         <nav className="scroll-thin flex gap-px overflow-x-auto p-2 md:flex-col md:px-2.5 md:py-3.5">
-          {heading('Account', true)}
-          {ACCOUNT.map((a) => link(a.to, a.label, a.Icon))}
-          {heading('Mail')}
-          {MAIL_SECTIONS.map((m) => link(m.id, m.label, MAIL_ICONS[m.id], search))}
+          {heading(t('settings.account'), true)}
+          {ACCOUNT.map((a) => link(a.to, t(a.label), a.Icon))}
+          {heading(t('settings.mail'))}
+          {MAIL_SECTIONS.map((m) => link(m.id, t(m.label), MAIL_ICONS[m.id], search))}
         </nav>
       </aside>
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
