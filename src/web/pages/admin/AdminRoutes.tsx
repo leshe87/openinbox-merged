@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router';
 import { Activity, Globe, Inbox, LayoutGrid, Plug, Settings, UsersRound, Waypoints } from 'lucide-react';
 import { useSession } from '../../lib/session';
+import { useT } from '../../lib/i18n';
 import { cn } from '../../lib/utils';
 import { useOverview } from './data';
 import { OverviewPage } from './OverviewPage';
@@ -13,17 +14,18 @@ import { ActivityPage } from './ActivityPage';
 import { AdminSettingsPage } from './AdminSettingsPage';
 
 const items = [
-  { to: '/admin', label: 'Overview', Icon: LayoutGrid, end: true },
-  { to: '/admin/inboxes', label: 'Inboxes', Icon: Inbox },
-  { to: '/admin/users', label: 'Users', Icon: UsersRound },
-  { to: '/admin/domains', label: 'Domains', Icon: Globe },
-  { to: '/admin/integrations', label: 'Integrations', Icon: Plug },
-  { to: '/admin/mailflow', label: 'Mail flow', Icon: Waypoints },
-  { to: '/admin/activity', label: 'Activity', Icon: Activity },
-  { to: '/admin/settings', label: 'Settings', Icon: Settings },
+  { to: '/admin', label: 'admin.navOverview', Icon: LayoutGrid, end: true },
+  { to: '/admin/inboxes', label: 'admin.navInboxes', Icon: Inbox },
+  { to: '/admin/users', label: 'admin.navUsers', Icon: UsersRound },
+  { to: '/admin/domains', label: 'admin.navDomains', Icon: Globe },
+  { to: '/admin/integrations', label: 'admin.navIntegrations', Icon: Plug },
+  { to: '/admin/mailflow', label: 'admin.navMailFlow', Icon: Waypoints },
+  { to: '/admin/activity', label: 'admin.navActivity', Icon: Activity },
+  { to: '/admin/settings', label: 'admin.navSettings', Icon: Settings },
 ];
 
 function AdminLayout() {
+  const t = useT();
   const { data: session } = useSession();
   // Problem counts for the Mail flow badge and the status card.
   const { data: o } = useOverview();
@@ -32,7 +34,7 @@ function AdminLayout() {
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <aside className="flex shrink-0 flex-col border-b border-border bg-bg md:w-[232px] md:border-r md:border-b-0">
         <nav className="scroll-thin flex gap-px overflow-x-auto p-2 md:flex-col md:px-2.5 md:py-3.5">
-          <div className="hidden h-[26px] items-center px-2.5 text-[11.5px] font-medium text-faint md:flex">Admin</div>
+          <div className="hidden h-[26px] items-center px-2.5 text-[11.5px] font-medium text-faint md:flex">{t('admin.navTitle')}</div>
           {items.map(({ to, label, Icon, end }) => (
             <NavLink
               key={to}
@@ -46,7 +48,7 @@ function AdminLayout() {
               }
             >
               <Icon className="h-[15px] w-[15px]" />
-              <span className="flex-1">{label}</span>
+              <span className="flex-1">{t(label)}</span>
               {to === '/admin/mailflow' && problems > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-danger-soft px-[5px] text-[11px] font-semibold text-danger">{problems}</span>}
             </NavLink>
           ))}
@@ -55,7 +57,7 @@ function AdminLayout() {
           {o && (
             <span className="flex items-center gap-1.5 font-medium text-fg">
               <span className={cn('h-[7px] w-[7px] rounded-full', problems ? 'bg-warning' : 'bg-success')} />
-              {problems ? `${problems} ${problems === 1 ? 'problem needs' : 'problems need'} attention` : 'All systems normal'}
+              {problems ? t('admin.problemsNeedAttention', { n: problems, s: problems === 1 ? '' : 's', verb: problems === 1 ? 'needs' : 'need' }) : t('admin.allSystemsNormal')}
             </span>
           )}
           <span className="truncate">

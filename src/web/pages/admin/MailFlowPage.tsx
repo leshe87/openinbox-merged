@@ -5,6 +5,7 @@ import { get, post } from '../../lib/api';
 import { bytes, fullDate, timeAgo } from '../../lib/format';
 import { useAction, useInvalidate } from '../../lib/hooks';
 import { cn } from '../../lib/utils';
+import { useT } from '../../lib/i18n';
 import { Button } from '../../components/ui/button';
 import { Alert, Card, EmptyState, PageHeader, PageSpinner, Tabs, type Tone } from '../../components/ui/misc';
 
@@ -72,31 +73,32 @@ function clock(ms: number): string {
 const grid = 'grid grid-cols-[64px_minmax(0,1fr)_88px] items-center gap-3.5 px-[18px] md:grid-cols-[76px_minmax(0,2.2fr)_minmax(0,1.6fr)_100px_minmax(0,1.4fr)]';
 
 export function MailFlowPage() {
+  const t = useT();
   const [tab, setTab] = useState<'inbound' | 'cloudflare' | 'failures'>('inbound');
   const [filter, setFilter] = useState('');
   const [status, setStatus] = useState('');
   const failures = useQuery({ queryKey: ['admin', 'failures'], queryFn: () => get<Failure[]>('/admin/failures') });
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Mail flow" description="What happened to recent mail: deliveries, rejections, spam, and sends that need attention." />
+      <PageHeader title={t('admin.mailFlowTitle')} description={t('admin.mailFlowDesc')} />
       <Tabs
         value={tab}
         onChange={setTab}
         tabs={[
-          { value: 'inbound', label: 'Inbound log' },
-          { value: 'cloudflare', label: 'Cloudflare Email Routing' },
-          { value: 'failures', label: 'Problems', count: failures.data?.length, tone: 'danger' },
+          { value: 'inbound', label: t('admin.mailFlowInbound') },
+          { value: 'cloudflare', label: t('admin.mailFlowCloudflare') },
+          { value: 'failures', label: t('admin.mailFlowProblems'), count: failures.data?.length, tone: 'danger' },
         ]}
       >
         {tab !== 'failures' && (
           <div className="flex h-[30px] w-full items-center gap-2 rounded-[7px] border border-border bg-surface px-2.5 focus-within:border-primary sm:w-60">
             <Search className="h-3.5 w-3.5 text-faint" />
-            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter by address or subject" aria-label="Filter by address or subject" className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-faint" />
+            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('admin.mailFlowFilter')} aria-label={t('admin.mailFlowFilter')} className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-faint" />
           </div>
         )}
         {tab === 'inbound' && (
-          <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Outcome" className="select-chevron h-[30px] rounded-[7px] border border-border bg-surface pr-8 pl-2.5 text-[12.5px] text-muted outline-none">
-            <option value="">All outcomes</option>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label={t('admin.mailFlowOutcome')} className="select-chevron h-[30px] rounded-[7px] border border-border bg-surface pr-8 pl-2.5 text-[12.5px] text-muted outline-none">
+            <option value="">{t('admin.mailFlowAllOutcomes')}</option>
             {['delivered', 'spam', 'rejected', 'duplicate', 'unparsed'].map((s) => (
               <option key={s} value={s}>
                 {s[0].toUpperCase() + s.slice(1)}
@@ -115,6 +117,7 @@ export function MailFlowPage() {
 const matches = (q: string, ...fields: string[]) => !q || fields.some((f) => f?.toLowerCase().includes(q));
 
 function InboundLog({ status, filter }: { status: string; filter: string }) {
+  const t = useT();
   const log = useQuery({ queryKey: ['admin', 'mailflow', status], queryFn: () => get<InboundEntry[]>(`/admin/mailflow${status ? `?status=${status}` : ''}`), refetchInterval: 30_000 });
   const q = filter.trim().toLowerCase();
   const rows = useMemo(() => (log.data ?? []).filter((e) => matches(q, e.from, e.to, e.subject)), [log.data, q]);
@@ -122,19 +125,19 @@ function InboundLog({ status, filter }: { status: string; filter: string }) {
   if (!log.data?.length)
     return (
       <Card>
-        <EmptyState icon={<Waypoints />} title="No mail yet">
-          Deliveries, rejections and spam show up here as mail arrives.
+        <EmptyState icon={<Waypoints />} title={t('admin.mailFlowNoMail')}>
+          {t('admin.mailFlowNoMailBody')}
         </EmptyState>
       </Card>
     );
   return (
     <Card className="overflow-hidden">
       <div className={cn(grid, 'h-9 border-b border-border bg-surface-2 text-xs font-medium text-faint')}>
-        <span>Time</span>
-        <span>From → To</span>
-        <span className="max-md:hidden">Subject</span>
-        <span>Outcome</span>
-        <span className="max-md:hidden">Reason</span>
+        <span>{t('admin.mailFlowTime')}</span>
+        <span>{t('admin.mailFlowFromTo')}</span>
+        <span className="max-md:hidden">{t('admin.mailFlowSubject')}</span>
+        <span>{t('admin.mailFlowOutcome')}</span>
+        <span className="max-md:hidden">{t('admin.mailFlowReason')}</span>
       </div>
       {rows.map((e) => (
         <div key={e.id} className={cn(grid, 'min-h-10 border-b border-border py-1.5 text-[12.5px]')}>
@@ -154,40 +157,41 @@ function InboundLog({ status, filter }: { status: string; filter: string }) {
         </div>
       ))}
       <div className="flex h-10 items-center justify-center text-[12.5px] text-faint">
-        {rows.length === log.data.length ? `${log.data.length} recent events` : `${rows.length} of ${log.data.length} recent events`}
+        {rows.length === log.data.length ? t('admin.mailFlowRecentEvents', { n: log.data.length }) : t('admin.mailFlowRecentEventsFiltered', { n: rows.length, total: log.data.length })}
       </div>
     </Card>
   );
 }
 
 function CloudflareLog({ filter }: { filter: string }) {
+  const t = useT();
   const log = useQuery({ queryKey: ['admin', 'mailflow', 'cf'], queryFn: () => get<{ available: boolean; reason?: string; events: CfEvent[] }>('/admin/mailflow/cloudflare') });
   const q = filter.trim().toLowerCase();
   if (log.isLoading) return <PageSpinner />;
-  if (!log.data?.available) return <Alert tone="warning">{log.data?.reason ?? 'Unavailable.'}</Alert>;
+  if (!log.data?.available) return <Alert tone="warning">{log.data?.reason ?? t('admin.mailFlowUnavailable')}</Alert>;
   const rows = log.data.events.filter((e) => matches(q, e.from, e.to, e.subject));
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-2 text-[12.5px] text-muted">
         <Cloud className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <span className="flex-1 text-pretty">Cloudflare's own log for the last 24 hours, including mail it rejected before OpenInbox saw it. "dropped" is normal: OpenInbox stores the mail instead of forwarding it.</span>
+        <span className="flex-1 text-pretty">{t('admin.mailFlowCfIntro')}</span>
         <Button size="xs" variant="ghost" icon={<RefreshCw className={cn(log.isFetching && 'animate-spin')} />} onClick={() => log.refetch()}>
-          Refresh
+          {t('admin.mailFlowRefresh')}
         </Button>
       </div>
       <Card className="overflow-hidden">
         {!log.data.events.length ? (
-          <EmptyState icon={<Waypoints />} title="No events in the last 24 hours">
-            Deliveries, rejections and spam show up here as mail arrives.
+          <EmptyState icon={<Waypoints />} title={t('admin.mailFlowNoEvents24h')}>
+            {t('admin.mailFlowNoMailBody')}
           </EmptyState>
         ) : (
           <>
             <div className={cn(grid, 'h-9 border-b border-border bg-surface-2 text-xs font-medium text-faint')}>
-              <span>Time</span>
-              <span>From → To</span>
-              <span className="max-md:hidden">Subject</span>
-              <span>Outcome</span>
-              <span className="max-md:hidden">Authentication</span>
+              <span>{t('admin.mailFlowTime')}</span>
+              <span>{t('admin.mailFlowFromTo')}</span>
+              <span className="max-md:hidden">{t('admin.mailFlowSubject')}</span>
+              <span>{t('admin.mailFlowOutcome')}</span>
+              <span className="max-md:hidden">{t('admin.mailFlowAuthentication')}</span>
             </div>
             {rows.map((e, i) => (
               <div key={i} className={cn(grid, 'min-h-10 border-b border-border py-1.5 text-[12.5px]')}>
@@ -211,7 +215,7 @@ function CloudflareLog({ filter }: { filter: string }) {
                 </span>
               </div>
             ))}
-            <div className="flex h-10 items-center justify-center text-[12.5px] text-faint">Showing the last 24 hours · {log.data.events.length} events</div>
+            <div className="flex h-10 items-center justify-center text-[12.5px] text-faint">{t('admin.mailFlowShowing24h', { n: log.data.events.length })}</div>
           </>
         )}
       </Card>
@@ -220,14 +224,15 @@ function CloudflareLog({ filter }: { filter: string }) {
 }
 
 function Failures({ data, loading }: { data?: Failure[]; loading: boolean }) {
+  const t = useT();
   const { run, busy } = useAction();
   const invalidate = useInvalidate();
   if (loading) return <PageSpinner />;
   if (!data?.length)
     return (
       <Card>
-        <EmptyState icon={<CircleCheck />} tone="success" title="No problems">
-          Bounces, complaints, failed sends and unreadable messages would appear here.
+        <EmptyState icon={<CircleCheck />} tone="success" title={t('admin.mailFlowNoProblems')}>
+          {t('admin.mailFlowNoProblemsBody')}
         </EmptyState>
       </Card>
     );
@@ -239,14 +244,14 @@ function Failures({ data, loading }: { data?: Failure[]; loading: boolean }) {
             {f.kind === 'failed' ? <CircleX className="h-3.5 w-3.5" /> : <OctagonAlert className="h-3.5 w-3.5" />}
           </span>
           <div className="min-w-60 flex-1">
-            <div className="text-[13px] font-semibold">{f.subject || '(no subject)'}</div>
+            <div className="text-[13px] font-semibold">{f.subject || t('admin.mailFlowNoSubject')}</div>
             <div className="text-xs text-muted">
-              {f.kind === 'failed' ? `To ${f.to.map((t) => t.address).join(', ')} from ${f.mailbox}` : `Received by ${f.mailbox}`} · {timeAgo(f.at)} · {f.attempts} attempt{f.attempts === 1 ? '' : 's'}
+              {f.kind === 'failed' ? t('admin.mailFlowFailedLine', { to: f.to.map((x) => x.address).join(', '), mailbox: f.mailbox }) : t('admin.mailFlowReceivedBy', { mailbox: f.mailbox })} · {timeAgo(f.at)} · {t('admin.mailFlowAttempts', { n: f.attempts, s: f.attempts === 1 ? '' : 's' })}
             </div>
             {f.error && <div className="mt-1 text-xs text-danger">{f.error}</div>}
             {f.retryAt && (
               <div className="mt-1 flex items-center gap-1 text-xs text-muted">
-                <TriangleAlert className="h-3 w-3" /> Retrying automatically {timeAgo(f.retryAt)}
+                <TriangleAlert className="h-3 w-3" /> {t('admin.mailFlowRetrying', { time: timeAgo(f.retryAt) })}
               </div>
             )}
           </div>
@@ -261,13 +266,13 @@ function Failures({ data, loading }: { data?: Failure[]; loading: boolean }) {
                   async () => {
                     const r = await post<{ status: string; error?: string }>(`/admin/failures/${f.id}/retry`);
                     await invalidate(['admin', 'failures'], ['admin', 'overview']);
-                    if (r.status !== 'sent') throw new Error(r.error ?? 'Still failing.');
+                    if (r.status !== 'sent') throw new Error(r.error ?? t('admin.mailFlowStillFailing'));
                   },
-                  'Sent',
+                  t('admin.mailFlowSent'),
                 )
               }
             >
-              Retry now
+              {t('admin.mailFlowRetry')}
             </Button>
           )}
         </div>

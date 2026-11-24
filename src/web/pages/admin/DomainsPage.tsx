@@ -5,6 +5,7 @@ import { del, get, patch, post, put, errorText } from '../../lib/api';
 import { timeAgo } from '../../lib/format';
 import { useAction, useInvalidate } from '../../lib/hooks';
 import { cn } from '../../lib/utils';
+import { useT } from '../../lib/i18n';
 import { runDomainSetup } from '../../lib/domain-setup';
 import { PROVIDER_INFO } from '../../../shared/constants';
 import type { DomainInfo, DomainSetupStep, MailboxAdmin, ProviderInfo, SenderLogo, ZoneInspection } from '../../lib/types';
@@ -14,6 +15,7 @@ import { Alert, Card, EmptyState, IconTile, PageHeader, PageSpinner } from '../.
 import { ConfirmDialog, Dialog, Menu, MenuItem } from '../../components/ui/overlay';
 
 export function DomainsPage() {
+  const t = useT();
   const domains = useQuery({ queryKey: ['admin', 'domains'], queryFn: () => get<DomainInfo[]>('/admin/domains') });
   const mailboxes = useQuery({ queryKey: ['admin', 'mailboxes'], queryFn: () => get<MailboxAdmin[]>('/admin/mailboxes') });
   const providers = useQuery({ queryKey: ['admin', 'providers'], queryFn: () => get<ProviderInfo[]>('/admin/providers') });
@@ -25,11 +27,11 @@ export function DomainsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Domains"
-        description="Domains in your Cloudflare account that receive mail here. Everything is set up through the Cloudflare API, and you can re-run or repair setup from this page at any time."
+        title={t('admin.domainsTitle')}
+        description={t('admin.domainsDesc')}
         actions={
           <Button variant="primary" icon={<Plus className="h-[15px] w-[15px]" />} onClick={() => setAdding(true)}>
-            Add a domain
+            {t('admin.domainsAdd')}
           </Button>
         }
       />
@@ -37,14 +39,14 @@ export function DomainsPage() {
         <Card>
           <EmptyState
             icon={<Globe />}
-            title="No domains yet"
+            title={t('admin.domainsEmpty')}
             action={
               <Button variant="primary" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => setAdding(true)}>
-                Add a domain
+                {t('admin.domainsAdd')}
               </Button>
             }
           >
-            Add a domain from your Cloudflare account to start receiving mail.
+            {t('admin.domainsEmptyBody')}
           </EmptyState>
         </Card>
       ) : (
@@ -97,6 +99,7 @@ function Status({ icon, children }: { icon: ReactNode; children: ReactNode }) {
 }
 
 function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: DomainInfo; mailboxes: MailboxAdmin[]; providers: ProviderInfo[]; onChanged: () => void }) {
+  const t = useT();
   const { run, busy } = useAction();
   const [steps, setSteps] = useState<DomainSetupStep[] | null>(null);
   const [running, setRunning] = useState(false);
@@ -136,35 +139,35 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
           <div className="truncate text-[15px] font-semibold">{d.name}</div>
           <div className="mt-[3px] flex flex-wrap gap-x-3.5 gap-y-1 text-[12.5px] text-muted">
             <Status icon={d.status === 'active' ? <CircleCheck className="text-success" /> : d.status === 'error' ? <CircleX className="text-danger" /> : <CircleDashed className="text-warning" />}>
-              {d.status === 'active' ? 'Receiving mail' : d.status === 'error' ? 'Not receiving' : d.status === 'disabled' ? 'Disabled' : 'Receiving pending'}
+              {d.status === 'active' ? t('admin.domainsReceiving') : d.status === 'error' ? t('admin.domainsNotReceiving') : d.status === 'disabled' ? t('admin.domainsDisabled') : t('admin.domainsReceivingPending')}
             </Status>
             <Status icon={sendState === 'ok' ? <CircleCheck className="text-success" /> : sendState === 'pending' ? <CircleDashed className="text-warning" /> : <CircleX className="text-faint" />}>
-              {sendState === 'ok' ? 'Sending' : sendState === 'pending' ? 'Sending pending' : 'Not sending'}
+              {sendState === 'ok' ? t('admin.domainsSending') : sendState === 'pending' ? t('admin.domainsSendingPending') : t('admin.domainsNotSending')}
             </Status>
             {health && (
               <Status icon={!issues.length ? <CircleCheck className="text-success" /> : errors.length ? <CircleX className="text-danger" /> : <TriangleAlert className="text-warning" />}>
-                {!issues.length ? 'DNS records' : `${issues.length} ${issues.length === 1 ? 'issue' : 'issues'}`}
+                {!issues.length ? t('admin.domainsDnsRecords') : t('admin.domainsIssues', { n: issues.length, s: issues.length === 1 ? '' : 's' })}
               </Status>
             )}
             <span>
-              {d.addresses} address{d.addresses === 1 ? '' : 'es'}
-              {d.healthCheckedAt ? ` · checked ${timeAgo(d.healthCheckedAt)}` : ''}
+              {t('admin.domainsAddresses', { n: d.addresses, es: d.addresses === 1 ? '' : 'es' })}
+              {d.healthCheckedAt ? t('admin.domainsChecked', { time: timeAgo(d.healthCheckedAt) }) : ''}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
           <Button size="xs" icon={<ListChecks />} onClick={() => setShowHealth((s) => !s)} className={cn(showHealth && 'bg-surface-2')}>
-            DNS records
+            {t('admin.domainsDnsRecords')}
           </Button>
-          <Button size="xs" icon={<Wrench />} loading={busy === 'repair'} onClick={() => run('repair', () => post(`/admin/domains/${d.id}/repair`).then(onChanged), 'Repair finished')}>
-            Repair
+          <Button size="xs" icon={<Wrench />} loading={busy === 'repair'} onClick={() => run('repair', () => post(`/admin/domains/${d.id}/repair`).then(onChanged), t('admin.domainsRepairFinished'))}>
+            {t('admin.domainsRepair')}
           </Button>
-          <Menu trigger={({ onClick }) => <IconButton label="More" onClick={onClick} icon={<Ellipsis />} />}>
-            <MenuItem icon={<RefreshCw />} onClick={() => run('check', () => post(`/admin/domains/${d.id}/check`).then(onChanged), 'Checked')}>
-              Check health now
+          <Menu trigger={({ onClick }) => <IconButton label={t('admin.domainsMore')} onClick={onClick} icon={<Ellipsis />} />}>
+            <MenuItem icon={<RefreshCw />} onClick={() => run('check', () => post(`/admin/domains/${d.id}/check`).then(onChanged), t('admin.domainsCheckedToast'))}>
+              {t('admin.domainsCheckHealth')}
             </MenuItem>
             <MenuItem icon={<Trash2 />} danger disabled={d.addresses > 0} onClick={() => setRemoving(true)}>
-              {d.addresses > 0 ? 'Remove (delete its inboxes first)' : 'Remove domain'}
+              {d.addresses > 0 ? t('admin.domainsRemoveDisabled') : t('admin.domainsRemove')}
             </MenuItem>
           </Menu>
         </div>
@@ -175,10 +178,10 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
           <div className="flex items-start gap-2.5 text-[12.5px]">
             <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
             <span className="flex-1">
-              <b className="font-semibold">Setup isn't finished.</b> You can re-run or repair setup from this page at any time.
+              <b className="font-semibold">{t('admin.domainsSetupUnfinished')}</b> {t('admin.domainsSetupUnfinishedBody')}
             </span>
             <Button size="xs" variant="primary" icon={<RotateCw />} loading={running} onClick={finish}>
-              Re-run setup
+              {t('admin.domainsRerunSetup')}
             </Button>
           </div>
           <div className="rounded-lg bg-surface px-3.5 py-3">
@@ -201,9 +204,9 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
             ))
           ) : (
             <div className="flex items-center justify-between gap-3 px-3.5 py-3 text-[13px] text-muted">
-              Not checked yet.
+              {t('admin.domainsNotChecked')}
               <Button size="xs" loading={busy === 'check'} onClick={() => run('check', () => post(`/admin/domains/${d.id}/check`).then(onChanged))}>
-                Check now
+                {t('admin.domainsCheckNow')}
               </Button>
             </div>
           )}
@@ -211,9 +214,9 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
       )}
 
       <div className="grid gap-x-6 gap-y-[18px] border-t border-border px-5 pt-[18px] pb-5 md:grid-cols-2">
-        <Field label="Send through" hint="Others are used as fallbacks when it reaches its limit.">
-          <Select value={d.providerId ?? ''} onChange={(e) => run('provider', () => patch(`/admin/domains/${d.id}`, { providerId: e.target.value ? Number(e.target.value) : null }).then(onChanged), 'Saved')}>
-            <option value="">The default provider</option>
+        <Field label={t('admin.domainsSendThrough')} hint={t('admin.domainsSendThroughHint')}>
+          <Select value={d.providerId ?? ''} onChange={(e) => run('provider', () => patch(`/admin/domains/${d.id}`, { providerId: e.target.value ? Number(e.target.value) : null }).then(onChanged), t('admin.domainsSaved'))}>
+            <option value="">{t('admin.domainsDefaultProvider')}</option>
             {providers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -221,20 +224,20 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
             ))}
           </Select>
         </Field>
-        <Field label="Catch-all" hint="Mail to addresses that don't exist goes here instead of being rejected. Catch-alls attract spam.">
+        <Field label={t('admin.domainsCatchAll')} hint={t('admin.domainsCatchAllHint')}>
           <Select
             value={d.catchAllMailboxId ?? ''}
-            onChange={(e) => run('catchall', () => patch(`/admin/domains/${d.id}`, { catchAllMailboxId: e.target.value ? Number(e.target.value) : null }).then(onChanged), 'Catch-all updated')}
+            onChange={(e) => run('catchall', () => patch(`/admin/domains/${d.id}`, { catchAllMailboxId: e.target.value ? Number(e.target.value) : null }).then(onChanged), t('admin.domainsCatchAllUpdated'))}
           >
-            <option value="">Off: reject unknown addresses</option>
+            <option value="">{t('admin.domainsCatchAllOff')}</option>
             {mailboxes.map((m) => (
               <option key={m.id} value={m.id}>
-                Deliver to {m.address}
+                {t('admin.domainsDeliverTo', { address: m.address })}
               </option>
             ))}
           </Select>
         </Field>
-        <Field label="Use your own address for the web app" hint="Cloudflare creates the DNS record and certificate. The workers.dev address keeps working.">
+        <Field label={t('admin.domainsAppAddress')} hint={t('admin.domainsAppAddressHint')}>
           {d.appHostname ? (
             <div className="flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-[13px]">
               <a href={`https://${d.appHostname}`} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-1.5 truncate hover:underline">
@@ -243,26 +246,26 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
               </a>
               <span className="flex items-center gap-[5px] text-xs font-medium text-success">
                 <Lock className="h-3 w-3" />
-                Active
+                {t('admin.domainsActive')}
               </span>
             </div>
           ) : (
             <div>
               <Button size="sm" onClick={() => setAppDomain(true)}>
-                Use mail.{d.name}
+                {t('admin.domainsUseMail', { domain: d.name })}
               </Button>
             </div>
           )}
         </Field>
-        <Field label="Sender logo" hint="Shown next to your mail in mail apps that support BIMI.">
+        <Field label={t('admin.domainsSenderLogo')} hint={t('admin.domainsSenderLogoHint')}>
           <div className="flex items-center gap-2.5">
             {d.logoUpdatedAt && <img src={`/api/bimi/${d.name}/logo-${d.logoUpdatedAt}.svg`} alt="" className="h-9 w-9 rounded-md border border-border bg-white object-contain" />}
             <Button size="sm" icon={d.logoUpdatedAt ? undefined : <ImageUp />} onClick={() => setLogoOpen(true)}>
-              {d.logoUpdatedAt ? 'Change' : 'Add a logo'}
+              {d.logoUpdatedAt ? t('admin.domainsChange') : t('admin.domainsAddLogo')}
             </Button>
           </div>
         </Field>
-        <Field label="Addresses that bypass OpenInbox" hint="Mail to these keeps going to its existing Email Routing rule.">
+        <Field label={t('admin.domainsBypass')} hint={t('admin.domainsBypassHint')}>
           {health?.conflicts?.length ? (
             <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border border-border px-2 py-[5px]">
               {health.conflicts.map((c) => (
@@ -270,10 +273,10 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
                   {c.address}
                   <button
                     type="button"
-                    aria-label={`Send ${c.address} to OpenInbox`}
-                    title="Disable this rule so mail comes to OpenInbox"
+                    aria-label={t('admin.domainsSendToOpenInbox', { address: c.address })}
+                    title={t('admin.domainsDisableRuleTitle')}
                     className="grid h-4 w-4 place-items-center rounded text-faint hover:text-fg"
-                    onClick={() => run('rule', () => post(`/admin/domains/${d.id}/disable-rule`, { address: c.address }).then(() => post(`/admin/domains/${d.id}/check`)).then(onChanged), 'Rule disabled')}
+                    onClick={() => run('rule', () => post(`/admin/domains/${d.id}/disable-rule`, { address: c.address }).then(() => post(`/admin/domains/${d.id}/check`)).then(onChanged), t('admin.domainsRuleDisabled'))}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -281,7 +284,7 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
               ))}
             </div>
           ) : (
-            <div className="flex h-9 items-center rounded-lg border border-dashed border-border px-3 text-[13px] text-faint">None</div>
+            <div className="flex h-9 items-center rounded-lg border border-dashed border-border px-3 text-[13px] text-faint">{t('admin.domainsNone')}</div>
           )}
         </Field>
       </div>
@@ -309,8 +312,8 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
         danger
         icon={<Trash2 />}
         onClose={() => setRemoving(false)}
-        title={`Remove ${d.name}?`}
-        confirmLabel="Remove domain"
+        title={t('admin.domainsRemoveTitle', { name: d.name })}
+        confirmLabel={t('admin.domainsRemove')}
         loading={busy === 'remove'}
         onConfirm={() =>
           run(
@@ -320,11 +323,11 @@ function DomainCard({ domain: d, mailboxes, providers, onChanged }: { domain: Do
                 setRemoving(false);
                 onChanged();
               }),
-            'Domain removed',
+            t('admin.domainsRemoved'),
           )
         }
       >
-        OpenInbox turns off its catch-all rule for this domain. Email Routing and DNS records stay as they are.
+        {t('admin.domainsRemoveBody')}
       </ConfirmDialog>
     </Card>
   );
@@ -335,6 +338,7 @@ const readFile = (f: File) => f.text();
 // BIMI: the domain's logo, its optional mark certificate, and what still keeps mail apps from
 // showing it.
 function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: () => void }) {
+  const t = useT();
   const status = useQuery({ queryKey: ['admin', 'logo', domain.id], queryFn: () => get<SenderLogo>(`/admin/domains/${domain.id}/logo`) });
   const [svg, setSvg] = useState<{ name: string; text: string; preview: string } | null>(null);
   // undefined keeps the stored certificate, null removes it.
@@ -358,7 +362,7 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
         setEnforcing(false);
         await refresh();
       },
-      'DMARC enforced',
+      t('admin.domainsDmarcEnforced'),
     );
   // Only when this page itself is served over HTTPS: that address is known to work.
   const httpsOrigin = location.protocol === 'https:' ? location.origin : null;
@@ -370,7 +374,7 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
         if (s?.logo) await rewriteRecord();
         await refresh();
       },
-      `App address set to ${httpsOrigin}`,
+      t('admin.domainsAppAddressSet', { url: httpsOrigin }),
     );
   const hasCert = cert === undefined ? !!s?.logo?.certificateUrl : !!cert;
 
@@ -408,20 +412,18 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
     <Dialog
       open
       onClose={onClose}
-      title={`Sender logo for ${domain.name}`}
-      description="Mail apps that support BIMI, such as Yahoo Mail, show this logo next to your mail once they trust your domain's sending. Gmail and Apple Mail also require a mark certificate (VMC or CMC) from a certificate authority."
+      title={t('admin.domainsLogoTitle', { name: domain.name })}
+      description={t('admin.domainsLogoDesc')}
       footerStart={
         s?.logo ? (
-          <Button variant="ghost" icon={<Trash2 />} loading={busy === 'remove'} onClick={() => run('remove', () => del(`/admin/domains/${domain.id}/logo`).then(onClose), 'Logo removed')}>
-            Remove
-          </Button>
+          <Button variant="ghost" icon={<Trash2 />} loading={busy === 'remove'} onClick={() => run('remove', () => del(`/admin/domains/${domain.id}/logo`).then(onClose), t('admin.domainsLogoRemoved'))}>{t('admin.domainsRemoveBtn')}</Button>
         ) : undefined
       }
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t('admin.domainsCancel')}</Button>
           <Button variant="primary" loading={busy === 'save'} disabled={!svg && cert === undefined} onClick={save}>
-            Save
+            {t('admin.domainsSave')}
           </Button>
         </>
       }
@@ -434,14 +436,14 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
           {error && <Alert tone="danger">{error}</Alert>}
           <div className="flex items-center gap-3.5">
             <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-white">
-              {preview ? <img src={preview} alt="Logo preview" className="h-full w-full object-contain" /> : <ImageUp className="h-5 w-5 text-faint" />}
+              {preview ? <img src={preview} alt={t('admin.domainsLogoPreview')} className="h-full w-full object-contain" /> : <ImageUp className="h-5 w-5 text-faint" />}
             </div>
             <div className="min-w-0 flex-1 text-[12.5px] text-muted">
-              A square SVG in the <b className="font-medium text-fg">SVG Tiny PS</b> profile, under 32 KB, with a title. Most design tools export plain SVG; convert it with a BIMI SVG converter first.
+              {t('admin.domainsLogoSvgBefore')}<b className="font-medium text-fg">SVG Tiny PS</b>{t('admin.domainsLogoSvgAfter')}
               {svg && <div className="mt-1 truncate text-fg">{svg.name}</div>}
             </div>
             <Button size="sm" onClick={() => svgInput.current?.click()}>
-              {preview ? 'Replace' : 'Choose SVG'}
+              {preview ? t('admin.domainsReplace') : t('admin.domainsChooseSvg')}
             </Button>
             <input ref={svgInput} type="file" accept=".svg,image/svg+xml" className="hidden" onChange={(e) => pickSvg(e.target.files?.[0])} />
           </div>
@@ -452,23 +454,21 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
               if (logoUrl.trim()) loadUrl();
             }}
           >
-            <Input type="url" aria-label="Logo address" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="Or load it from an address: https://example.com/logo.svg" className="flex-1" />
+            <Input type="url" aria-label={t('admin.domainsLogoAddress')} value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder={t('admin.domainsLogoUrlPlaceholder')} className="flex-1" />
             <Button size="sm" type="submit" loading={busy === 'url'} disabled={!logoUrl.trim()}>
-              Load
+              {t('admin.domainsLoad')}
             </Button>
           </form>
           <div className="flex items-center gap-3 rounded-lg border border-border px-3.5 py-2.5 text-[12.5px]">
             <span className="min-w-0 flex-1 text-muted">
-              <b className="font-medium text-fg">Mark certificate</b> (optional): the .pem file of your VMC or CMC.
-              {hasCert && <span className="ml-1 text-fg">{cert ? cert.name : 'On file.'}</span>}
+              <b className="font-medium text-fg">{t('admin.domainsMarkCert')}</b>{t('admin.domainsMarkCertDesc')}
+              {hasCert && <span className="ml-1 text-fg">{cert ? cert.name : t('admin.domainsOnFile')}</span>}
             </span>
             {hasCert && (
-              <Button size="xs" variant="ghost" onClick={() => setCert(null)}>
-                Remove
-              </Button>
+              <Button size="xs" variant="ghost" onClick={() => setCert(null)}>{t('admin.domainsRemoveBtn')}</Button>
             )}
             <Button size="xs" onClick={() => certInput.current?.click()}>
-              {hasCert ? 'Replace' : 'Add'}
+              {hasCert ? t('admin.domainsReplace') : t('admin.domainsAddCert')}
             </Button>
             <input
               ref={certInput}
@@ -485,70 +485,62 @@ function SenderLogoDialog({ domain, onClose }: { domain: DomainInfo; onClose: ()
             <div className="overflow-hidden rounded-lg border border-border">
               <LogoCheck
                 ok={s.dmarc.enforced}
-                label={s.dmarc.enforced ? 'DMARC is enforced' : "DMARC isn't enforced"}
+                label={s.dmarc.enforced ? t('admin.domainsDmarcEnforcedLabel') : t('admin.domainsDmarcNotEnforced')}
                 action={
                   !s.dmarc.enforced &&
                   !enforcing && (
-                    <Button size="xs" icon={<Wrench />} onClick={() => setEnforcing(true)}>
-                      Fix
-                    </Button>
+                    <Button size="xs" icon={<Wrench />} onClick={() => setEnforcing(true)}>{t('admin.domainsFix')}</Button>
                   )
                 }
               >
                 {s.dmarc.enforced
                   ? s.dmarc.record
-                  : `Mail apps show the logo only under p=quarantine or p=reject. ${s.dmarc.record ? `It is ${s.dmarc.record}.` : 'There is no DMARC record.'}`}
+                  : (<>{t('admin.domainsDmarcOnly')} {s.dmarc.record ? t('admin.domainsDmarcIs', { record: s.dmarc.record }) : t('admin.domainsDmarcNone')}</>)}
                 {enforcing && s.dmarc.fix && (
                   <div className="mt-2 flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-2.5">
                     <div>
-                      _dmarc.{domain.name} becomes <span className="font-mono text-fg">{s.dmarc.fix}</span>
+                      {t('admin.domainsDmarcBecomes', { domain: domain.name })} <span className="font-mono text-fg">{s.dmarc.fix}</span>
                     </div>
                     <div>
-                      Mail that fails DMARC then goes to spam. First check that everything sending as {domain.name} passes it: OpenInbox&apos;s providers and any other service, such as a newsletter tool.
-                      {s.dmarc.record && /rua=/i.test(s.dmarc.record) ? ' The DMARC reports your record already asks for show which mail passes.' : ''}
+                      {t('admin.domainsDmarcWarn', { domain: domain.name })}
+                      {s.dmarc.record && /rua=/i.test(s.dmarc.record) ? t('admin.domainsDmarcRua') : ''}
                     </div>
                     <div className="flex gap-2">
                       <Button size="xs" variant="primary" loading={busy === 'dmarc'} onClick={enforceDmarc}>
-                        Enforce DMARC
+                        {t('admin.domainsEnforceDmarc')}
                       </Button>
-                      <Button size="xs" variant="ghost" onClick={() => setEnforcing(false)}>
-                        Cancel
-                      </Button>
+                      <Button size="xs" variant="ghost" onClick={() => setEnforcing(false)}>{t('admin.domainsCancel')}</Button>
                     </div>
                   </div>
                 )}
               </LogoCheck>
               <LogoCheck
                 ok={s.https}
-                label={s.https ? 'Served over HTTPS' : 'Not served over HTTPS'}
+                label={s.https ? t('admin.domainsServedHttps') : t('admin.domainsNotServedHttps')}
                 action={
                   !s.https &&
                   httpsOrigin && (
-                    <Button size="xs" icon={<Wrench />} loading={busy === 'https'} onClick={switchToHttps}>
-                      Fix
-                    </Button>
+                    <Button size="xs" icon={<Wrench />} loading={busy === 'https'} onClick={switchToHttps}>{t('admin.domainsFix')}</Button>
                   )
                 }
               >
                 {s.https
-                  ? (s.logo?.url ?? 'From this app’s address.')
+                  ? (s.logo?.url ?? t('admin.domainsFromAppAddress'))
                   : httpsOrigin
-                    ? `Mail apps fetch logos over HTTPS only. Fix sets the app’s address to ${httpsOrigin}.`
-                    : 'Mail apps fetch logos over HTTPS only. Set the app’s https address in Admin → Settings.'}
+                    ? t('admin.domainsHttpsFix', { url: httpsOrigin })
+                    : t('admin.domainsHttpsSet')}
               </LogoCheck>
               {s.logo && (
                 <LogoCheck
                   ok={s.record.current === s.record.expected}
-                  label={s.record.current === s.record.expected ? `${s.record.name} is in place` : `${s.record.name} doesn't match`}
+                  label={s.record.current === s.record.expected ? t('admin.domainsRecordInPlace', { name: s.record.name }) : t('admin.domainsRecordMismatch', { name: s.record.name })}
                   action={
                     s.record.current !== s.record.expected && (
-                      <Button size="xs" icon={<Wrench />} loading={busy === 'record'} onClick={() => run('record', () => rewriteRecord().then(refresh), `${s.record.name} rewritten`)}>
-                        Fix
-                      </Button>
+                      <Button size="xs" icon={<Wrench />} loading={busy === 'record'} onClick={() => run('record', () => rewriteRecord().then(refresh), t('admin.domainsRecordRewritten', { name: s.record.name }))}>{t('admin.domainsFix')}</Button>
                     )
                   }
                 >
-                  {s.record.current === s.record.expected ? s.record.current : `Expected ${s.record.expected}, found ${s.record.current ?? 'none'}.`}
+                  {s.record.current === s.record.expected ? s.record.current : t('admin.domainsRecordExpected', { expected: s.record.expected, found: s.record.current ?? t('admin.domainsNoneValue') })}
                 </LogoCheck>
               )}
             </div>
@@ -573,6 +565,7 @@ function LogoCheck({ ok, label, action, children }: { ok: boolean; label: string
 }
 
 function AppDomainDialog({ domain, onClose, onDone }: { domain: DomainInfo; onClose: () => void; onDone: () => void }) {
+  const t = useT();
   const [sub, setSub] = useState('mail');
   const [result, setResult] = useState<string | null>(null);
   const { run, busy } = useAction();
@@ -580,35 +573,33 @@ function AppDomainDialog({ domain, onClose, onDone }: { domain: DomainInfo; onCl
     <Dialog
       open
       onClose={result ? onDone : onClose}
-      title="Use your own address for the web app"
-      description="Cloudflare creates the DNS record and certificate. The workers.dev address keeps working."
+      title={t('admin.domainsAppAddress')}
+      description={t('admin.domainsAppAddressHint')}
       footer={
         result ? (
-          <Button variant="primary" onClick={onDone}>
-            Done
-          </Button>
+          <Button variant="primary" onClick={onDone}>{t('admin.domainsDone')}</Button>
         ) : (
           <>
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onClick={onClose}>{t('admin.domainsCancel')}</Button>
             <Button variant="primary" loading={!!busy} onClick={() => run('attach', async () => setResult((await post<{ url: string }>(`/admin/domains/${domain.id}/app-domain`, { subdomain: sub })).url))}>
-              Attach
+              {t('admin.domainsAttach')}
             </Button>
           </>
         )
       }
     >
       {result ? (
-        <Alert tone="success" title="Attached">
-          OpenInbox will answer at{' '}
+        <Alert tone="success" title={t('admin.domainsAttached')}>
+          {t('admin.domainsAttachBodyBefore')}
           <a href={result} className="font-medium underline" target="_blank" rel="noreferrer">
             {result}
-          </a>{' '}
-          within a minute or two, once Cloudflare issues the certificate. Sign in again there (sessions are per address).
+          </a>
+          {t('admin.domainsAttachBodyAfter')}
         </Alert>
       ) : (
-        <Field label="Address">
+        <Field label={t('admin.domainsAddress')}>
           <div className="flex h-9 overflow-hidden rounded-lg border border-border text-[13px] focus-within:border-primary focus-within:ring-3 focus-within:ring-[var(--ring)]">
-            <input className="min-w-0 flex-1 bg-surface px-3 outline-none" value={sub} onChange={(e) => setSub(e.target.value.trim())} aria-label="Subdomain" />
+            <input className="min-w-0 flex-1 bg-surface px-3 outline-none" value={sub} onChange={(e) => setSub(e.target.value.trim())} aria-label={t('admin.domainsSubdomain')} />
             <span className="flex items-center border-l border-border bg-surface-2 px-3 text-muted">.{domain.name}</span>
           </div>
         </Field>
@@ -618,6 +609,7 @@ function AppDomainDialog({ domain, onClose, onDone }: { domain: DomainInfo; onCl
 }
 
 function AddDomainDialog({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
+  const t = useT();
   const zones = useQuery({ queryKey: ['admin', 'zones'], queryFn: () => get<{ id: string; name: string; status: string; connected: boolean; usable: boolean | null }[]>('/admin/zones') });
   const all = zones.data ?? [];
   const available = all.filter((z) => !z.connected && z.usable !== false);
@@ -667,11 +659,11 @@ function AddDomainDialog({ onClose, onAdded }: { onClose: () => void; onAdded: (
       <Dialog
         open
         onClose={onAdded}
-        title={done ? `${zone?.name ?? 'The domain'} is ready` : `Setting up ${zone?.name ?? 'the domain'}`}
-        description={done ? 'Mail for this domain now arrives in OpenInbox. Create inboxes for it on the Inboxes page.' : 'Keep this open. It takes about 30 seconds.'}
+        title={done ? t('admin.domainsReady', { name: zone?.name ?? t('admin.domainsTheDomain') }) : t('admin.domainsSettingUp', { name: zone?.name ?? t('admin.domainsTheDomainLower') })}
+        description={done ? t('admin.domainsReadyDesc') : t('admin.domainsSettingUpDesc')}
         footer={
           <Button variant="primary" onClick={onAdded} disabled={busy}>
-            {done ? 'Done' : 'Close'}
+            {done ? t('admin.domainsDone') : t('admin.domainsClose')}
           </Button>
         }
       >
@@ -680,13 +672,11 @@ function AddDomainDialog({ onClose, onAdded }: { onClose: () => void; onAdded: (
           <div className="mt-4 flex items-center gap-2.5 rounded-lg bg-danger-soft px-3 py-2.5 text-[12.5px]">
             <CircleX className="h-[15px] w-[15px] shrink-0 text-danger" />
             <span className="min-w-0 flex-1">
-              <b className="font-semibold">Setup stopped</b>
-              {error.step ? ` at “${error.step}”` : ''}. {error.message}
+              <b className="font-semibold">{t('admin.domainsSetupStopped')}</b>
+              {error.step ? t('admin.domainsSetupStoppedAt', { step: error.step }) : ''}. {error.message}
             </span>
             {domainId && (
-              <Button size="xs" icon={<RotateCw />} onClick={() => setup(domainId)}>
-                Retry
-              </Button>
+              <Button size="xs" icon={<RotateCw />} onClick={() => setup(domainId)}>{t('admin.domainsRetry')}</Button>
             )}
           </div>
         )}
@@ -697,35 +687,35 @@ function AddDomainDialog({ onClose, onAdded }: { onClose: () => void; onAdded: (
     <Dialog
       open
       onClose={onClose}
-      title="Add a domain"
-      description="Pick one of the zones on your Cloudflare account. OpenInbox turns on Email Routing, routes its mail here and adds DMARC if it's missing."
+      title={t('admin.domainsAdd')}
+      description={t('admin.domainsAddDesc')}
       footer={
         available.length ? (
           <>
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onClick={onClose}>{t('admin.domainsCancel')}</Button>
             <Button variant="primary" loading={busy} disabled={!zoneId || (mx?.mxState === 'other' && !replaceMx)} onClick={add}>
-              Set up {zone?.name ?? 'domain'}
+              {t('admin.domainsSetUp', { name: zone?.name ?? t('admin.domainsDomainWord') })}
             </Button>
           </>
         ) : (
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>{t('admin.domainsClose')}</Button>
         )
       }
     >
       {zones.isLoading ? (
         <PageSpinner />
       ) : available.length === 0 ? (
-        <EmptyState icon={<Globe />} tone="warning" title="No more domains">
+        <EmptyState icon={<Globe />} tone="warning" title={t('admin.domainsNoMore')}>
           {all.some((z) => !z.connected)
-            ? `The Cloudflare token can't manage ${all.filter((z) => !z.connected).map((z) => z.name).join(', ')}. Add ${all.filter((z) => !z.connected).length === 1 ? 'it' : 'them'} to the token's zone resources in Cloudflare, then come back.`
-            : 'Every zone on this Cloudflare account is already connected. Add a new domain to Cloudflare first, then come back.'}
+            ? t('admin.domainsTokenCantManage', { names: all.filter((z) => !z.connected).map((z) => z.name).join(', '), them: all.filter((z) => !z.connected).length === 1 ? t('admin.domainsIt') : t('admin.domainsThem') })
+            : t('admin.domainsAllConnected')}
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-2">
           {error && <Alert tone="danger">{error.message}</Alert>}
           {all.map((z) => {
             const on = z.id === zoneId;
-            const desc = z.connected ? 'Already set up' : z.usable === false ? "The Cloudflare token can't manage this domain. Add it to the token's zone resources." : on ? (inspection.isLoading ? 'Checking mail records…' : mx?.mxState === 'none' ? 'This domain does not receive mail yet.' : mx?.mxState === 'cloudflare' ? 'Email Routing is already on for this domain.' : mx?.mxState === 'other' ? `MX points to ${mx.mx[0]?.host}` : '') : '';
+            const desc = z.connected ? t('admin.domainsAlreadySetUp') : z.usable === false ? t('admin.domainsTokenCantManageOne') : on ? (inspection.isLoading ? t('admin.domainsCheckingMail') : mx?.mxState === 'none' ? t('admin.domainsNoMailYet') : mx?.mxState === 'cloudflare' ? t('admin.domainsRoutingOn') : mx?.mxState === 'other' ? t('admin.domainsMxPointsTo', { host: mx.mx[0]?.host }) : '') : '';
             return (
               <button
                 key={z.id}
@@ -742,20 +732,20 @@ function AddDomainDialog({ onClose, onAdded }: { onClose: () => void; onAdded: (
                   <span className="block text-[13.5px] font-medium">{z.name}</span>
                   {desc && <span className="block truncate text-xs text-muted">{desc}</span>}
                 </span>
-                {on && mx?.mxState === 'other' && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11.5px] font-medium text-warning">MX elsewhere</span>}
+                {on && mx?.mxState === 'other' && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11.5px] font-medium text-warning">{t('admin.domainsMxElsewhere')}</span>}
               </button>
             );
           })}
           {mx?.mxState === 'other' && (
             <div className="mt-2 flex flex-col gap-3 rounded-[10px] border border-[color-mix(in_oklch,var(--warning)_35%,var(--border))] p-3.5">
               <div className="text-[13px]">
-                <b className="font-semibold text-warning">This domain receives mail elsewhere.</b> <span className="text-muted">Mail keeps going there until you replace these MX records.</span>
+                <b className="font-semibold text-warning">{t('admin.domainsMailElsewhere')}</b> <span className="text-muted">{t('admin.domainsMailKeepsGoing')}</span>
               </div>
               <div className="overflow-hidden rounded-lg border border-border font-mono text-[12.5px]">
                 <div className="grid grid-cols-[60px_70px_1fr] bg-surface-2 px-3 py-2 font-sans text-xs font-medium text-faint">
-                  <span>Type</span>
-                  <span>Priority</span>
-                  <span>Value</span>
+                  <span>{t('admin.domainsType')}</span>
+                  <span>{t('admin.domainsPriority')}</span>
+                  <span>{t('admin.domainsValue')}</span>
                 </div>
                 {mx.mx.map((r) => (
                   <div key={r.host} className="grid grid-cols-[60px_70px_1fr] border-t border-border px-3 py-2">
@@ -765,11 +755,11 @@ function AddDomainDialog({ onClose, onAdded }: { onClose: () => void; onAdded: (
                   </div>
                 ))}
               </div>
-              <Checkbox checked={replaceMx} onChange={setReplaceMx} label="Replace them and move this domain's mail to OpenInbox" />
+              <Checkbox checked={replaceMx} onChange={setReplaceMx} label={t('admin.domainsReplaceMx')} />
             </div>
           )}
-          {!!mx?.conflicts.length && <Alert tone="neutral">{mx.conflicts.map((c) => c.address).join(', ')} have their own routing rules and will bypass OpenInbox until disabled.</Alert>}
-          <p className="mt-1 text-xs text-faint">You can re-run or repair setup from this page at any time.</p>
+          {!!mx?.conflicts.length && <Alert tone="neutral">{t('admin.domainsConflicts', { addresses: mx.conflicts.map((c) => c.address).join(', ') })}</Alert>}
+          <p className="mt-1 text-xs text-faint">{t('admin.domainsSetupUnfinishedBody')}</p>
         </div>
       )}
     </Dialog>

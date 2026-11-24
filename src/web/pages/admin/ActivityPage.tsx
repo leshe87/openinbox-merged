@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Activity, AtSign, Forward, Globe, HardDrive, Inbox, Key, KeyRound, LogIn, Plug, Rocket, Settings, ShieldCheck, Trash2, UserPlus, UserRound } from 'lucide-react';
 import { get } from '../../lib/api';
+import { t as translate, useT } from '../../lib/i18n';
 import { fullDate, timeAgo } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/button';
@@ -18,42 +19,45 @@ interface AuditEntry {
 }
 
 const LABELS: Record<string, string> = {
-  'setup.claimed': 'Claimed this instance',
-  'auth.login': 'Signed in',
-  'auth.owner_recovered': 'Recovered the owner account',
-  'account.password_changed': 'Changed their password',
-  'account.2fa_enabled': 'Turned on two-factor',
-  'account.2fa_disabled': 'Turned off two-factor',
-  'account.sessions_revoked': 'Signed out other sessions',
-  'user.created': 'Added a user',
-  'user.updated': 'Updated a user',
-  'user.deleted': 'Deleted a user',
-  'user.password_reset': 'Reset a password',
-  'user.2fa_reset': 'Reset two-factor',
-  'mailbox.created': 'Created an inbox',
-  'mailbox.deleted': 'Deleted an inbox',
-  'mailbox.members_changed': 'Changed inbox members',
-  'alias.created': 'Added an alias',
-  'domain.added': 'Added a domain',
-  'domain.removed': 'Removed a domain',
-  'domain.app_domain': 'Attached the app to a domain',
-  'provider.connected': 'Connected a sending provider',
-  'provider.removed': 'Removed a sending provider',
-  'cloudflare.token_replaced': 'Replaced the Cloudflare token',
-  'storage.r2_enabled': 'Turned on attachments (R2)',
-  'storage.mode': 'Changed the storage mode',
-  'settings.updated': 'Changed settings',
-  'crypto.reencrypted': 'Re-encrypted stored secrets',
-  'forwarding.added': 'Added a forwarding address',
+  'setup.claimed': 'admin.activityClaimed',
+  'auth.login': 'admin.activitySignedIn',
+  'auth.owner_recovered': 'admin.activityOwnerRecovered',
+  'account.password_changed': 'admin.activityPasswordChanged',
+  'account.2fa_enabled': 'admin.activity2faEnabled',
+  'account.2fa_disabled': 'admin.activity2faDisabled',
+  'account.sessions_revoked': 'admin.activitySessionsRevoked',
+  'user.created': 'admin.activityUserCreated',
+  'user.updated': 'admin.activityUserUpdated',
+  'user.deleted': 'admin.activityUserDeleted',
+  'user.password_reset': 'admin.activityPasswordReset',
+  'user.2fa_reset': 'admin.activity2faReset',
+  'mailbox.created': 'admin.activityMailboxCreated',
+  'mailbox.deleted': 'admin.activityMailboxDeleted',
+  'mailbox.members_changed': 'admin.activityMembersChanged',
+  'alias.created': 'admin.activityAliasCreated',
+  'domain.added': 'admin.activityDomainAdded',
+  'domain.removed': 'admin.activityDomainRemoved',
+  'domain.app_domain': 'admin.activityAppDomain',
+  'provider.connected': 'admin.activityProviderConnected',
+  'provider.removed': 'admin.activityProviderRemoved',
+  'cloudflare.token_replaced': 'admin.activityCfTokenReplaced',
+  'storage.r2_enabled': 'admin.activityR2Enabled',
+  'storage.mode': 'admin.activityStorageMode',
+  'settings.updated': 'admin.activitySettingsUpdated',
+  'crypto.reencrypted': 'admin.activityReencrypted',
+  'forwarding.added': 'admin.activityForwardingAdded',
 };
 
-export function actionLabel(action: string): string {
-  return LABELS[action] ?? action;
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+export function actionLabel(action: string, t: TFn = translate): string {
+  const key = LABELS[action];
+  return key ? t(key) : action;
 }
 
 // "Maya Chen added a user": the label reads as a sentence after the name.
-export function actionPhrase(action: string): string {
-  const l = actionLabel(action);
+export function actionPhrase(action: string, t: TFn = translate): string {
+  const l = actionLabel(action, t);
   return LABELS[action] ? l[0].toLowerCase() + l.slice(1) : l;
 }
 
@@ -82,23 +86,24 @@ function actionTile(action: string): { icon: ReactNode; cls: string } {
   return { icon: ICONS[area] ?? <Activity />, cls: 'bg-surface-2 text-muted' };
 }
 
-function dayLabel(ms: number): string {
+function dayLabel(ms: number, t: TFn): string {
   const d = new Date(ms);
   const today = new Date();
   const yesterday = new Date(today.getTime() - 86_400_000);
-  if (d.toDateString() === today.toDateString()) return 'Today';
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (d.toDateString() === today.toDateString()) return t('admin.activityToday');
+  if (d.toDateString() === yesterday.toDateString()) return t('admin.activityYesterday');
   return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
 export function ActivityRow({ entry: r, ip = true, relative }: { entry: Pick<AuditEntry, 'action' | 'target' | 'at' | 'by'> & { ip?: string | null }; ip?: boolean; relative?: boolean }) {
+  const t = useT();
   const tile = actionTile(r.action);
   return (
     <div className={cn('grid min-h-[50px] items-center gap-3 border-b border-border px-5 py-2 text-[13px] last:border-b-0', ip ? 'grid-cols-[28px_26px_minmax(0,1fr)_auto] md:grid-cols-[28px_26px_minmax(0,1fr)_130px_70px]' : 'grid-cols-[28px_26px_minmax(0,1fr)_auto]')}>
-      <Avatar name={r.by ?? 'System'} address={r.by ?? 'system'} size={28} />
+      <Avatar name={r.by ?? t('admin.activitySystem')} address={r.by ?? 'system'} size={28} />
       <span className={cn('grid h-[26px] w-[26px] place-items-center rounded-[7px] [&>svg]:h-[13px] [&>svg]:w-[13px]', tile.cls)}>{tile.icon}</span>
       <span className="min-w-0 truncate">
-        <b className="font-semibold">{r.by ?? 'System'}</b> <span className="text-muted">{actionPhrase(r.action)}</span> {r.target && <span className="font-medium">{r.target}</span>}
+        <b className="font-semibold">{r.by ?? t('admin.activitySystem')}</b> <span className="text-muted">{actionPhrase(r.action, t)}</span> {r.target && <span className="font-medium">{r.target}</span>}
       </span>
       {ip && <span className="hidden truncate font-mono text-[11.5px] text-faint md:block">{r.ip}</span>}
       <span className="text-right text-xs text-faint tabular-nums" title={fullDate(r.at)}>
@@ -109,6 +114,7 @@ export function ActivityRow({ entry: r, ip = true, relative }: { entry: Pick<Aud
 }
 
 export function ActivityPage() {
+  const t = useT();
   const q = useInfiniteQuery({
     queryKey: ['admin', 'audit'],
     queryFn: ({ pageParam }) => get<AuditEntry[]>(`/admin/audit${pageParam ? `?before=${pageParam}` : ''}`),
@@ -118,19 +124,19 @@ export function ActivityPage() {
   const rows = q.data?.pages.flat() ?? [];
   const days: { day: string; items: AuditEntry[] }[] = [];
   for (const r of rows) {
-    const day = dayLabel(r.at);
+    const day = dayLabel(r.at, t);
     if (days[days.length - 1]?.day === day) days[days.length - 1].items.push(r);
     else days.push({ day, items: [r] });
   }
   return (
     <div>
-      <PageHeader title="Activity" description="Sign-ins and changes to users, inboxes, domains, credentials and settings." />
+      <PageHeader title={t('admin.activityTitle')} description={t('admin.activityDesc')} />
       {q.isLoading ? (
         <PageSpinner />
       ) : !rows.length ? (
         <Card>
-          <EmptyState icon={<Activity />} title="No activity yet">
-            Sign-ins and changes to users, inboxes, domains and settings are listed here.
+          <EmptyState icon={<Activity />} title={t('admin.activityEmpty')}>
+            {t('admin.activityEmptyBody')}
           </EmptyState>
         </Card>
       ) : (
@@ -150,7 +156,7 @@ export function ActivityPage() {
       {q.hasNextPage && (
         <div className="mt-4 flex justify-center">
           <Button onClick={() => q.fetchNextPage()} loading={q.isFetchingNextPage}>
-            Load more
+            {t('admin.activityLoadMore')}
           </Button>
         </div>
       )}

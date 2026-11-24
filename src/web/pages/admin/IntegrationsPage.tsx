@@ -5,6 +5,7 @@ import { del, get, patch, post, errorText } from '../../lib/api';
 import { num, timeAgo } from '../../lib/format';
 import { useAction, useInvalidate } from '../../lib/hooks';
 import { cn } from '../../lib/utils';
+import { useT } from '../../lib/i18n';
 import { PROVIDER_INFO, tokenTemplateUrl, type ProviderType } from '../../../shared/constants';
 import type { PermissionCheck, ProviderInfo } from '../../lib/types';
 import { Button, IconButton } from '../../components/ui/button';
@@ -14,12 +15,13 @@ import { ConfirmDialog, Dialog, Menu, MenuItem, MenuSeparator } from '../../comp
 import { PermissionList } from '../setup/SetupPage';
 
 export function IntegrationsPage() {
+  const t = useT();
   useEffect(() => {
     if (location.hash) setTimeout(() => document.querySelector(location.hash)?.scrollIntoView({ behavior: 'smooth' }), 300);
   }, []);
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Integrations" description="Sending providers, your Cloudflare connection and optional attachment storage." />
+      <PageHeader title={t('admin.integrationsTitle')} description={t('admin.integrationsDesc')} />
       <ProvidersSection />
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <CloudflareSection />
@@ -41,6 +43,7 @@ function ProviderMark({ type, size = 38 }: { type: ProviderType; size?: number }
 }
 
 function ProvidersSection() {
+  const t = useT();
   const providers = useQuery({ queryKey: ['admin', 'providers'], queryFn: () => get<ProviderInfo[]>('/admin/providers') });
   const [connect, setConnect] = useState<ProviderType | null>(null);
   const invalidate = useInvalidate();
@@ -48,27 +51,27 @@ function ProvidersSection() {
   return (
     <section className="flex flex-col gap-3">
       <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <h2 className="text-sm font-semibold">Sending providers</h2>
-        <p className="text-[12.5px] text-muted text-pretty">Cloudflare receives your mail; a provider sends it. Tried in fallback order when one hits its limit or fails.</p>
+        <h2 className="text-sm font-semibold">{t('admin.integrationsSendingProviders')}</h2>
+        <p className="text-[12.5px] text-muted text-pretty">{t('admin.integrationsProvidersDesc')}</p>
       </div>
       {providers.isLoading ? <PageSpinner /> : providers.data?.map((p) => <ProviderCard key={p.id} provider={p} onChanged={refresh} />)}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {(Object.keys(PROVIDER_INFO) as ProviderType[]).map((t) => {
-          const connected = providers.data?.some((p) => p.type === t);
+        {(Object.keys(PROVIDER_INFO) as ProviderType[]).map((pt) => {
+          const connected = providers.data?.some((p) => p.type === pt);
           return (
-            <button key={t} type="button" onClick={() => setConnect(t)} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-border-strong">
+            <button key={pt} type="button" onClick={() => setConnect(pt)} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-border-strong">
               <div className="flex w-full items-center gap-3">
-                <ProviderMark type={t} />
+                <ProviderMark type={pt} />
                 <div className="min-w-0 flex-1 leading-snug">
-                  <div className="text-sm font-semibold">{PROVIDER_INFO[t].label}</div>
-                  <div className="text-xs text-muted">{PROVIDER_INFO[t].freeTier}</div>
+                  <div className="text-sm font-semibold">{PROVIDER_INFO[pt].label}</div>
+                  <div className="text-xs text-muted">{PROVIDER_INFO[pt].freeTier}</div>
                 </div>
               </div>
               <div className="mt-auto flex w-full items-center justify-between gap-2">
-                <StatusPill tone={connected ? 'success' : 'neutral'}>{connected ? 'Connected' : 'Not connected'}</StatusPill>
+                <StatusPill tone={connected ? 'success' : 'neutral'}>{connected ? t('admin.integrationsConnected') : t('admin.integrationsNotConnected')}</StatusPill>
                 <span className="flex h-7 items-center gap-1.5 rounded-[7px] border border-border px-2.5 text-[12.5px] font-medium whitespace-nowrap shadow-card">
                   <Plug className="h-3.5 w-3.5" />
-                  {connected ? 'Add another' : 'Connect'}
+                  {connected ? t('admin.integrationsAddAnother') : t('admin.integrationsConnect')}
                 </span>
               </div>
             </button>
@@ -90,13 +93,14 @@ function ProvidersSection() {
 }
 
 function Usage({ label, used, limit }: { label: string; used: number; limit: number | null }) {
+  const t = useT();
   return (
     <>
       <div className="flex text-[12.5px]">
         <span className="flex-1 text-muted">{label}</span>
         <span className="tabular-nums">
           <b className="font-semibold">{num(used)}</b>
-          <span className="text-faint"> / {limit !== null ? num(limit) : 'no cap'}</span>
+          <span className="text-faint"> / {limit !== null ? num(limit) : t('admin.integrationsNoCap')}</span>
         </span>
       </div>
       {limit !== null && <Meter value={used} max={limit} />}
@@ -105,6 +109,7 @@ function Usage({ label, used, limit }: { label: string; used: number; limit: num
 }
 
 function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onChanged: () => void }) {
+  const t = useT();
   const { run, busy } = useAction();
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -118,32 +123,32 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
         <div className="min-w-48 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold">{p.name}</span>
-            <StatusPill tone={p.status === 'connected' ? 'success' : p.status === 'error' ? 'danger' : 'neutral'}>{p.status === 'connected' ? 'Connected' : p.status === 'error' ? 'Error' : 'Not checked'}</StatusPill>
+            <StatusPill tone={p.status === 'connected' ? 'success' : p.status === 'error' ? 'danger' : 'neutral'}>{p.status === 'connected' ? t('admin.integrationsConnected') : p.status === 'error' ? t('admin.integrationsError') : t('admin.integrationsNotChecked')}</StatusPill>
             {p.isDefault && (
               <Badge tone="primary">
-                <Star /> Default
+                <Star /> {t('admin.integrationsDefault')}
               </Badge>
             )}
           </div>
           <div className="mt-0.5 text-xs text-muted">
-            Fallback order {p.priority}
+            {t('admin.integrationsFallbackOrder', { n: p.priority })}
             {Object.entries(p.config)
               .filter(([k]) => k !== 'password' && k !== 'apiSecret')
               .map(([k, v]) => ` · ${k}: ${v}`)
               .join('')}
-            {p.checkedAt ? ` · checked ${timeAgo(p.checkedAt)}` : ''}
+            {p.checkedAt ? t('admin.integrationsChecked', { time: timeAgo(p.checkedAt) }) : ''}
           </div>
           {p.lastError && <div className="mt-1 text-xs text-danger">{p.lastError}</div>}
         </div>
         <div className="flex w-full flex-col gap-1.5 sm:w-56">
-          <Usage label="Today" used={p.usedToday} limit={p.dailyLimit} />
+          <Usage label={t('admin.integrationsToday')} used={p.usedToday} limit={p.dailyLimit} />
           {p.monthlyLimit !== null && (
             <div className="mt-1 flex flex-col gap-1.5">
-              <Usage label="This month" used={p.usedMonth} limit={p.monthlyLimit} />
+              <Usage label={t('admin.integrationsThisMonth')} used={p.usedMonth} limit={p.monthlyLimit} />
             </div>
           )}
         </div>
-        <Menu className="w-[260px]" trigger={({ onClick }) => <IconButton label="Provider actions" onClick={onClick} icon={<Ellipsis />} />}>
+        <Menu className="w-[260px]" trigger={({ onClick }) => <IconButton label={t('admin.integrationsProviderActions')} onClick={onClick} icon={<Ellipsis />} />}>
           <MenuItem
             icon={<RefreshCw />}
             onClick={() =>
@@ -154,19 +159,19 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
                   onChanged();
                   if (!r.ok) throw new Error(r.message);
                 },
-                'Connection works',
+                t('admin.integrationsConnectionWorks'),
               )
             }
           >
-            Test connection
+            {t('admin.integrationsTestConnection')}
           </MenuItem>
           {!p.isDefault && (
-            <MenuItem icon={<Star />} onClick={() => run('default', () => patch(`/admin/providers/${p.id}`, { isDefault: true }).then(onChanged), 'Default provider changed')}>
-              Make default
+            <MenuItem icon={<Star />} onClick={() => run('default', () => patch(`/admin/providers/${p.id}`, { isDefault: true }).then(onChanged), t('admin.integrationsDefaultChanged'))}>
+              {t('admin.integrationsMakeDefault')}
             </MenuItem>
           )}
           <MenuItem icon={<Pencil />} onClick={() => setEditing(true)}>
-            Edit limits and credentials
+            {t('admin.integrationsEditLimits')}
           </MenuItem>
           {PROVIDER_INFO[p.type].hasWebhookApi && (
             <MenuItem
@@ -177,19 +182,17 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
                   async () => {
                     const r = await post<{ ok: boolean }>(`/admin/providers/${p.id}/webhook`);
                     onChanged();
-                    if (!r.ok) throw new Error('The provider did not accept the webhook. Register it in their dashboard instead.');
+                    if (!r.ok) throw new Error(t('admin.integrationsWebhookRejected'));
                   },
-                  'Delivery webhook registered',
+                  t('admin.integrationsWebhookRegistered'),
                 )
               }
             >
-              {p.webhook ? 'Re-register delivery webhook' : 'Register delivery webhook'}
+              {p.webhook ? t('admin.integrationsReregisterWebhook') : t('admin.integrationsRegisterWebhook')}
             </MenuItem>
           )}
           <MenuSeparator />
-          <MenuItem icon={<Trash2 />} danger onClick={() => setRemoving(true)}>
-            Remove
-          </MenuItem>
+          <MenuItem icon={<Trash2 />} danger onClick={() => setRemoving(true)}>{t('admin.integrationsRemove')}</MenuItem>
         </Menu>
       </div>
       {PROVIDER_INFO[p.type].hasDomainApi && (p.domains.length > 0 || unconfigured.length > 0) && (
@@ -199,18 +202,18 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
               <div className="flex flex-wrap items-center gap-2.5 px-5 py-2.5">
                 <StatusDot tone={d.status === 'verified' ? 'success' : d.status === 'failed' ? 'danger' : 'warning'} />
                 <span className="text-[13px] font-medium">{d.name}</span>
-                <span className="text-xs text-muted">{d.status === 'verified' ? 'Verified for sending' : d.lastError || 'Waiting for verification'}</span>
+                <span className="text-xs text-muted">{d.status === 'verified' ? t('admin.integrationsVerifiedSending') : d.lastError || t('admin.integrationsWaitingVerification')}</span>
                 <div className="flex-1" />
                 <Button size="xs" variant="ghost" onClick={() => setExpanded(expanded === d.domainId ? null : d.domainId)}>
-                  {expanded === d.domainId ? 'Hide' : 'DNS records'}
+                  {expanded === d.domainId ? t('admin.integrationsHide') : t('admin.integrationsDnsRecords')}
                 </Button>
                 {d.status !== 'verified' && (
                   <Button size="xs" loading={busy === `check-${d.domainId}`} onClick={() => run(`check-${d.domainId}`, () => post(`/admin/providers/${p.id}/domains/${d.domainId}/check`).then(onChanged))}>
-                    Check now
+                    {t('admin.integrationsCheckNow')}
                   </Button>
                 )}
-                <Button size="xs" variant="ghost" loading={busy === `sync-${d.domainId}`} onClick={() => run(`sync-${d.domainId}`, () => post(`/admin/providers/${p.id}/domains/${d.domainId}`).then(onChanged), 'DNS records written')}>
-                  Rewrite DNS
+                <Button size="xs" variant="ghost" loading={busy === `sync-${d.domainId}`} onClick={() => run(`sync-${d.domainId}`, () => post(`/admin/providers/${p.id}/domains/${d.domainId}`).then(onChanged), t('admin.integrationsDnsWritten'))}>
+                  {t('admin.integrationsRewriteDns')}
                 </Button>
               </div>
               {expanded === d.domainId && (
@@ -218,10 +221,10 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
                   <table className="w-full text-xs">
                     <thead className="bg-surface-2 text-left text-faint">
                       <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:font-medium">
-                        <th>Type</th>
-                        <th>Name</th>
-                        <th>Value</th>
-                        <th>Status</th>
+                        <th>{t('admin.integrationsType')}</th>
+                        <th>{t('admin.integrationsName')}</th>
+                        <th>{t('admin.integrationsValue')}</th>
+                        <th>{t('admin.integrationsStatus')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -246,10 +249,10 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
             <div key={d.id} className="flex items-center gap-2.5 border-b border-border px-5 py-2.5 last:border-0">
               <StatusDot tone="neutral" />
               <span className="text-[13px] font-medium">{d.name}</span>
-              <span className="text-xs text-muted">Not set up with {p.name}</span>
+              <span className="text-xs text-muted">{t('admin.integrationsNotSetUp', { name: p.name })}</span>
               <div className="flex-1" />
-              <Button size="xs" variant="primary" loading={busy === `sync-${d.id}`} onClick={() => run(`sync-${d.id}`, () => post(`/admin/providers/${p.id}/domains/${d.id}`).then(onChanged), 'Domain set up')}>
-                Set up sending
+              <Button size="xs" variant="primary" loading={busy === `sync-${d.id}`} onClick={() => run(`sync-${d.id}`, () => post(`/admin/providers/${p.id}/domains/${d.id}`).then(onChanged), t('admin.integrationsDomainSetUp'))}>
+                {t('admin.integrationsSetUpSending')}
               </Button>
             </div>
           ))}
@@ -258,8 +261,8 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
       {!PROVIDER_INFO[p.type].hasDomainApi && (
         <div className="border-t border-border px-5 py-3 text-xs text-muted text-pretty">
           {p.type === 'cloudflare'
-            ? 'Cloudflare has no sending-domain API: enable Email Sending for each domain in the Cloudflare dashboard (Email Service > Email Sending). Cloudflare manages SPF and DKIM once the domain is onboarded there.'
-            : "SMTP has no domain API: publish your SMTP provider's SPF and DKIM records for each domain yourself. Domain health shows whether SPF includes them."}
+            ? t('admin.integrationsCfNoApi')
+            : t('admin.integrationsSmtpNoApi')}
         </div>
       )}
       {editing && (
@@ -277,8 +280,8 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
         danger
         icon={<Trash2 />}
         onClose={() => setRemoving(false)}
-        title={`Remove ${p.name}?`}
-        confirmLabel="Remove"
+        title={t('admin.integrationsRemoveTitle', { name: p.name })}
+        confirmLabel={t('admin.integrationsRemove')}
         loading={busy === 'remove'}
         onConfirm={() =>
           run(
@@ -288,11 +291,11 @@ function ProviderCard({ provider: p, onChanged }: { provider: ProviderInfo; onCh
                 setRemoving(false);
                 onChanged();
               }),
-            'Provider removed',
+            t('admin.integrationsProviderRemoved'),
           )
         }
       >
-        OpenInbox stops sending through it. DNS records stay in place. Domains set to send through it must be switched first.
+        {t('admin.integrationsRemoveBody')}
       </ConfirmDialog>
     </Card>
   );
@@ -302,35 +305,39 @@ function credentialFields(type: ProviderType) {
   if (type === 'cloudflare') return [];
   if (type === 'smtp')
     return [
-      { key: 'host', label: 'SMTP server', placeholder: 'smtp.example.com' },
-      { key: 'port', label: 'Port', placeholder: '587' },
-      { key: 'username', label: 'Username', placeholder: '' },
-      { key: 'password', label: 'Password', placeholder: '', secret: true },
+      { key: 'host', label: 'admin.integrationsSmtpServer', placeholder: 'smtp.example.com' },
+      { key: 'port', label: 'admin.integrationsPort', placeholder: '587' },
+      { key: 'username', label: 'admin.integrationsUsername', placeholder: '' },
+      { key: 'password', label: 'admin.integrationsPassword', placeholder: '', secret: true },
     ];
   if (type === 'mailjet')
     return [
-      { key: 'apiKey', label: 'API key', placeholder: '' },
-      { key: 'apiSecret', label: 'Secret key', placeholder: '', secret: true },
+      { key: 'apiKey', label: 'admin.integrationsApiKey', placeholder: '' },
+      { key: 'apiSecret', label: 'admin.integrationsSecretKey', placeholder: '', secret: true },
     ];
-  return [{ key: 'apiKey', label: 'API key', placeholder: type === 'resend' ? 're_...' : 'xkeysib-...', secret: true }];
+  return [{ key: 'apiKey', label: 'admin.integrationsApiKey', placeholder: type === 'resend' ? 're_...' : 'xkeysib-...', secret: true }];
 }
 
 const KEY_HELP: Record<ProviderType, { href: string; text: string }> = {
-  cloudflare: { href: 'https://developers.cloudflare.com/email-service/', text: 'Sends with the Cloudflare API token OpenInbox already uses, so there is no key to paste. Cloudflare requires a Workers Paid plan, and each sending domain has to be onboarded in the dashboard first.' },
-  resend: { href: 'https://resend.com/api-keys', text: 'Create a key with Full access in Resend → API Keys (full access lets OpenInbox verify domains for you).' },
-  brevo: { href: 'https://app.brevo.com/settings/keys/api', text: 'Create an API key in Brevo → SMTP & API → API Keys.' },
-  mailjet: { href: 'https://app.mailjet.com/account/apikeys', text: 'Find your API key and secret key in Mailjet → Account settings → API Key Management.' },
-  smtp: { href: '', text: 'Use port 587 (STARTTLS) or 465 (TLS). Port 25 is blocked on Cloudflare Workers.' },
+  cloudflare: { href: 'https://developers.cloudflare.com/email-service/', text: 'admin.integrationsHelpCloudflare' },
+  resend: { href: 'https://resend.com/api-keys', text: 'admin.integrationsHelpResend' },
+  brevo: { href: 'https://app.brevo.com/settings/keys/api', text: 'admin.integrationsHelpBrevo' },
+  mailjet: { href: 'https://app.mailjet.com/account/apikeys', text: 'admin.integrationsHelpMailjet' },
+  smtp: { href: '', text: 'admin.integrationsHelpSmtp' },
 };
 
-const encrypted: ReactNode = (
-  <>
-    <Lock className="h-[13px] w-[13px]" />
-    Encrypted at rest
-  </>
-);
+function EncryptedNote() {
+  const t = useT();
+  return (
+    <>
+      <Lock className="h-[13px] w-[13px]" />
+      {t('admin.integrationsEncrypted')}
+    </>
+  );
+}
 
 function ConnectDialog({ type, onClose, onConnected }: { type: ProviderType; onClose: () => void; onConnected: () => void }) {
+  const t = useT();
   const info = PROVIDER_INFO[type];
   const [values, setValues] = useState<Record<string, string>>({ port: '587' });
   const [security, setSecurity] = useState<'starttls' | 'tls'>('starttls');
@@ -369,33 +376,29 @@ function ConnectDialog({ type, onClose, onConnected }: { type: ProviderType; onC
     <Dialog
       open
       onClose={result ? onConnected : onClose}
-      title={`Connect ${info.label}`}
-      description={type === 'smtp' ? 'Any provider that gives you SMTP credentials.' : type === 'cloudflare' ? 'Sends through Cloudflare with the API token you connected. No separate credentials.' : `Free tier: ${info.freeTier}.`}
-      footerStart={!result && encrypted}
+      title={t('admin.integrationsConnectTitle', { name: info.label })}
+      description={type === 'smtp' ? t('admin.integrationsConnectSmtpDesc') : type === 'cloudflare' ? t('admin.integrationsConnectCfDesc') : t('admin.integrationsConnectFreeTier', { tier: info.freeTier })}
+      footerStart={!result && <EncryptedNote />}
       footer={
         result ? (
-          <Button variant="primary" onClick={onConnected}>
-            Done
-          </Button>
+          <Button variant="primary" onClick={onConnected}>{t('admin.integrationsDone')}</Button>
         ) : (
           <>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button variant="primary" type="submit" form="connect-provider" loading={busy}>
-              Connect
-            </Button>
+            <Button onClick={onClose}>{t('admin.integrationsCancel')}</Button>
+            <Button variant="primary" type="submit" form="connect-provider" loading={busy}>{t('admin.integrationsConnect')}</Button>
           </>
         )
       }
     >
       {result ? (
         <div className="space-y-3">
-          <Alert tone="success" title={`${info.label} connected`}>
-            {result.note ?? 'Credentials work. Domain setup results:'}
+          <Alert tone="success" title={t('admin.integrationsConnectedTitle', { name: info.label })}>
+            {result.note ?? t('admin.integrationsCredentialsWork')}
           </Alert>
           {result.domains.map((d) => (
             <div key={d.domainId} className="flex items-center gap-2 text-[13px]">
               {d.status === 'verified' ? <CircleCheck className="h-4 w-4 text-success" /> : d.status === 'failed' ? <CircleX className="h-4 w-4 text-danger" /> : <TriangleAlert className="h-4 w-4 text-warning" />}
-              <span>{d.status === 'verified' ? 'Verified' : d.status === 'failed' ? (d.error ?? 'Failed') : 'DNS written; waiting for the provider to verify (usually a few minutes)'}</span>
+              <span>{d.status === 'verified' ? t('admin.integrationsVerified') : d.status === 'failed' ? (d.error ?? t('admin.integrationsFailed')) : t('admin.integrationsDnsWrittenWaiting')}</span>
             </div>
           ))}
         </div>
@@ -403,16 +406,16 @@ function ConnectDialog({ type, onClose, onConnected }: { type: ProviderType; onC
         <form id="connect-provider" onSubmit={submit} className="space-y-4">
           {error && <Alert tone="danger">{error}</Alert>}
           <p className="text-[13px] text-muted text-pretty">
-            {KEY_HELP[type].text}{' '}
+            {t(KEY_HELP[type].text)}{' '}
             {KEY_HELP[type].href && (
               <a href={KEY_HELP[type].href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary-text hover:underline">
-                Open <ExternalLink className="h-3 w-3" />
+                {t('admin.integrationsOpen')} <ExternalLink className="h-3 w-3" />
               </a>
             )}
           </p>
           <div className="grid gap-3.5 sm:grid-cols-2">
             {fields.map((f) => (
-              <Field key={f.key} label={f.label} id={f.key} className={cn(fields.length === 1 && 'sm:col-span-2')}>
+              <Field key={f.key} label={t(f.label)} id={f.key} className={cn(fields.length === 1 && 'sm:col-span-2')}>
                 {f.secret ? (
                   <PasswordInput id={f.key} value={values[f.key] ?? ''} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })} placeholder={f.placeholder} required={f.key !== 'password'} />
                 ) : (
@@ -421,7 +424,7 @@ function ConnectDialog({ type, onClose, onConnected }: { type: ProviderType; onC
               </Field>
             ))}
             {type === 'smtp' && (
-              <Field label="Security" className="sm:col-span-2">
+              <Field label={t('admin.integrationsSecurity')} className="sm:col-span-2">
                 <div className="grid">
                   <SegmentedControl
                     value={security}
@@ -434,15 +437,15 @@ function ConnectDialog({ type, onClose, onConnected }: { type: ProviderType; onC
                 </div>
               </Field>
             )}
-            <Field label="Daily limit">
-              <Input type="number" min={0} value={daily} onChange={(e) => setDaily(e.target.value)} placeholder="No cap" />
+            <Field label={t('admin.integrationsDailyLimit')}>
+              <Input type="number" min={0} value={daily} onChange={(e) => setDaily(e.target.value)} placeholder={t('admin.integrationsNoCapPlaceholder')} />
             </Field>
-            <Field label="Monthly limit">
-              <Input type="number" min={0} value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="No cap" />
+            <Field label={t('admin.integrationsMonthlyLimit')}>
+              <Input type="number" min={0} value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder={t('admin.integrationsNoCapPlaceholder')} />
             </Field>
-            <p className="-mt-1.5 text-xs text-muted sm:col-span-2">Leave empty for no cap.</p>
+            <p className="-mt-1.5 text-xs text-muted sm:col-span-2">{t('admin.integrationsLeaveEmpty')}</p>
           </div>
-          {info.hasDomainApi && <p className="text-xs text-muted text-pretty">After connecting, OpenInbox registers each of your domains with {info.label} and writes the DNS records it asks for.</p>}
+          {info.hasDomainApi && <p className="text-xs text-muted text-pretty">{t('admin.integrationsAfterConnecting', { name: info.label })}</p>}
         </form>
       )}
     </Dialog>
@@ -450,6 +453,7 @@ function ConnectDialog({ type, onClose, onConnected }: { type: ProviderType; onC
 }
 
 function EditProviderDialog({ provider: p, onClose, onSaved }: { provider: ProviderInfo; onClose: () => void; onSaved: () => void }) {
+  const t = useT();
   const [name, setName] = useState(p.name);
   const [daily, setDaily] = useState(p.dailyLimit?.toString() ?? '');
   const [monthly, setMonthly] = useState(p.monthlyLimit?.toString() ?? '');
@@ -461,11 +465,11 @@ function EditProviderDialog({ provider: p, onClose, onSaved }: { provider: Provi
     <Dialog
       open
       onClose={onClose}
-      title={`Edit ${p.name}`}
-      footerStart={encrypted}
+      title={t('admin.integrationsEditTitle', { name: p.name })}
+      footerStart={<EncryptedNote />}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t('admin.integrationsCancel')}</Button>
           <Button
             variant="primary"
             loading={!!busy}
@@ -483,39 +487,37 @@ function EditProviderDialog({ provider: p, onClose, onSaved }: { provider: Provi
                   if (secret) await post(`/admin/providers/${p.id}/webhook-secret`, { secret });
                   onSaved();
                 },
-                'Saved',
+                t('admin.integrationsSaved'),
               )
             }
-          >
-            Save
-          </Button>
+          >{t('admin.integrationsSave')}</Button>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label="Name">
+        <Field label={t('admin.integrationsName')}>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Daily limit">
-            <Input type="number" value={daily} onChange={(e) => setDaily(e.target.value)} placeholder="No cap" />
+          <Field label={t('admin.integrationsDailyLimit')}>
+            <Input type="number" value={daily} onChange={(e) => setDaily(e.target.value)} placeholder={t('admin.integrationsNoCapPlaceholder')} />
           </Field>
-          <Field label="Monthly limit">
-            <Input type="number" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="No cap" />
+          <Field label={t('admin.integrationsMonthlyLimit')}>
+            <Input type="number" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder={t('admin.integrationsNoCapPlaceholder')} />
           </Field>
-          <Field label="Fallback order" hint="Lower goes first.">
+          <Field label={t('admin.integrationsFallbackOrderLabel')} hint={t('admin.integrationsLowerFirst')}>
             <Input type="number" value={priority} onChange={(e) => setPriority(e.target.value)} />
           </Field>
         </div>
         {credentialFields(p.type).length > 0 && <div className="space-y-3 rounded-[10px] border border-border p-3.5">
-          <div className="text-xs font-medium text-muted">Credentials (leave masked values to keep them)</div>
+          <div className="text-xs font-medium text-muted">{t('admin.integrationsCredentialsNote')}</div>
           {credentialFields(p.type).map((f) => (
-            <Field key={f.key} label={f.label}>
+            <Field key={f.key} label={t(f.label)}>
               <Input value={config[f.key] ?? ''} onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })} />
             </Field>
           ))}
           {p.type === 'smtp' && (
-            <Field label="Security">
+            <Field label={t('admin.integrationsSecurity')}>
               <Select value={config.security ?? 'starttls'} onChange={(e) => setConfig({ ...config, security: e.target.value })}>
                 <option value="starttls">STARTTLS (587)</option>
                 <option value="tls">TLS (465)</option>
@@ -524,7 +526,7 @@ function EditProviderDialog({ provider: p, onClose, onSaved }: { provider: Provi
           )}
         </div>}
         {p.type === 'resend' && (
-          <Field label="Webhook signing secret" hint="Only if you registered the webhook yourself in the Resend dashboard (whsec_…).">
+          <Field label={t('admin.integrationsWebhookSecret')} hint={t('admin.integrationsWebhookSecretHint')}>
             <Input value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="whsec_..." className="font-mono" />
           </Field>
         )}
@@ -543,22 +545,23 @@ interface CloudflareInfo {
 }
 
 function CloudflareSection() {
+  const t = useT();
   const cf = useQuery({ queryKey: ['admin', 'cloudflare'], queryFn: () => get<CloudflareInfo>('/admin/cloudflare') });
   const [token, setToken] = useState('');
   const [replacing, setReplacing] = useState(false);
   const { run, busy } = useAction();
   const data = cf.data;
-  const source = data?.source === 'secret' ? 'token from the CF_API_TOKEN secret' : data?.source === 'stored' ? 'token pasted in OpenInbox' : 'no token';
+  const source = data?.source === 'secret' ? t('admin.integrationsTokenSecret') : data?.source === 'stored' ? t('admin.integrationsTokenPasted') : t('admin.integrationsNoToken');
   return (
     <Card>
       <CardHeader
         icon={<Cloud />}
-        title="Cloudflare connection"
-        description={data ? `${data.connected ? (data.account?.name ?? 'Connected') : (data.message ?? 'No API token')} · ${source}` : undefined}
+        title={t('admin.integrationsCfTitle')}
+        description={data ? `${data.connected ? (data.account?.name ?? t('admin.integrationsCfConnected')) : (data.message ?? t('admin.integrationsNoApiToken'))} · ${source}` : undefined}
         action={
           data?.source !== 'secret' ? (
             <Button size="xs" icon={<KeyRound />} onClick={() => setReplacing((r) => !r)}>
-              Replace API token
+              {t('admin.integrationsReplaceToken')}
             </Button>
           ) : undefined
         }
@@ -580,44 +583,42 @@ function CloudflareSection() {
                       setReplacing(false);
                       cf.refetch();
                     }),
-                  'Token saved',
+                  t('admin.integrationsTokenSaved'),
                 );
               }}
             >
-              <Field label="Replace API token">
+              <Field label={t('admin.integrationsReplaceToken')}>
                 <div className="flex gap-2">
-                  <Input type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="New Cloudflare API token" required autoFocus />
-                  <Button type="submit" variant="primary" loading={busy === 'token'} className="h-9">
-                    Save
-                  </Button>
+                  <Input type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder={t('admin.integrationsNewTokenPlaceholder')} required autoFocus />
+                  <Button type="submit" variant="primary" loading={busy === 'token'} className="h-9">{t('admin.integrationsSave')}</Button>
                 </div>
               </Field>
               <a href={tokenTemplateUrl()} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-xs font-medium text-primary-text hover:underline">
-                Create a token with every permission filled in <ExternalLink className="h-3 w-3" />
+                {t('admin.integrationsCreateToken')} <ExternalLink className="h-3 w-3" />
               </a>
             </form>
           )}
           <dl className="grid grid-cols-[110px_1fr] gap-y-1.5 text-[12.5px]">
-            <dt className="text-faint">Status</dt>
+            <dt className="text-faint">{t('admin.integrationsStatus')}</dt>
             <dd className="flex items-center gap-1.5">
               {data?.connected ? <CircleCheck className="h-3.5 w-3.5 text-success" /> : <CircleX className="h-3.5 w-3.5 text-danger" />}
-              {data?.connected ? 'API token connected' : (data?.message ?? 'No API token')}
+              {data?.connected ? t('admin.integrationsTokenConnected') : (data?.message ?? t('admin.integrationsNoApiToken'))}
             </dd>
-            <dt className="text-faint">Account</dt>
+            <dt className="text-faint">{t('admin.integrationsAccount')}</dt>
             <dd>{data?.account?.name ?? '–'}</dd>
-            <dt className="text-faint">Worker</dt>
+            <dt className="text-faint">{t('admin.integrationsWorker')}</dt>
             <dd className="flex min-w-0 items-center gap-2">
               <span className="truncate">{data?.worker?.name ? `${data.worker.name}${data.worker.subdomain ? ` (${data.worker.name}.${data.worker.subdomain}.workers.dev)` : ''}` : '–'}</span>
-              <button type="button" className="shrink-0 text-xs font-medium text-primary-text hover:underline" onClick={() => run('detect', () => post('/admin/cloudflare/detect').then(() => cf.refetch()), 'Worker detected')}>
-                {busy === 'detect' ? 'Detecting…' : 'Detect again'}
+              <button type="button" className="shrink-0 text-xs font-medium text-primary-text hover:underline" onClick={() => run('detect', () => post('/admin/cloudflare/detect').then(() => cf.refetch()), t('admin.integrationsWorkerDetected'))}>
+                {busy === 'detect' ? t('admin.integrationsDetecting') : t('admin.integrationsDetectAgain')}
               </button>
             </dd>
-            <dt className="text-faint">D1 database</dt>
+            <dt className="text-faint">{t('admin.integrationsD1')}</dt>
             <dd className="truncate font-mono text-xs">{data?.worker?.d1Id ?? '–'}</dd>
           </dl>
           <div className="border-t border-border pt-3">
-            <div className="mb-1 text-xs font-medium text-faint">Permissions</div>
-            {data?.permissions.length ? <PermissionList permissions={data.permissions} compact /> : <div className="text-[13px] text-muted">Unavailable.</div>}
+            <div className="mb-1 text-xs font-medium text-faint">{t('admin.integrationsPermissions')}</div>
+            {data?.permissions.length ? <PermissionList permissions={data.permissions} compact /> : <div className="text-[13px] text-muted">{t('admin.integrationsUnavailable')}</div>}
           </div>
         </div>
       )}
@@ -637,6 +638,7 @@ interface StorageInfo {
 }
 
 function StorageSection() {
+  const t = useT();
   const storage = useQuery({ queryKey: ['admin', 'storage'], queryFn: () => get<StorageInfo>('/admin/storage') });
   const [bucket, setBucket] = useState('openinbox-mail');
   const [keyId, setKeyId] = useState('');
@@ -651,7 +653,7 @@ function StorageSection() {
   return (
     <section id="storage" className="scroll-mt-6">
       <Card>
-        <CardHeader icon={<HardDrive />} title="Attachment storage" description={s?.mode === 'r2' ? 'Attachments are on' : 'Text-only mode'} />
+        <CardHeader icon={<HardDrive />} title={t('admin.integrationsStorageTitle')} description={s?.mode === 'r2' ? t('admin.integrationsAttachmentsOn') : t('admin.integrationsTextOnlyMode')} />
         {storage.isLoading ? (
           <PageSpinner />
         ) : (
@@ -660,9 +662,9 @@ function StorageSection() {
               <div className="grid">
                 <SegmentedControl
                   value={s.mode}
-                  onChange={(mode) => run('mode', () => post('/admin/storage/mode', { mode }).then(refresh), mode === 'r2' ? 'Attachments on' : 'Text-only mode on')}
+                  onChange={(mode) => run('mode', () => post('/admin/storage/mode', { mode }).then(refresh), mode === 'r2' ? t('admin.integrationsAttachmentsOn') : t('admin.integrationsTextOnlyOn'))}
                   options={[
-                    { value: 'text', label: 'Text-only' },
+                    { value: 'text', label: t('admin.integrationsTextOnly') },
                     { value: 'r2', label: 'R2' },
                   ]}
                 />
@@ -670,14 +672,14 @@ function StorageSection() {
             )}
             <p className="text-[13px] leading-relaxed text-muted text-pretty">
               {s?.mode === 'r2'
-                ? `New mail is kept in full in the R2 bucket "${s.bucket}". You can attach files when composing.`
-                : "Message text is stored in D1. Attachments are listed but not kept (except on small messages), and you can't attach files when composing. R2's free tier includes 10 GB."}
+                ? t('admin.integrationsR2Body', { bucket: s.bucket })
+                : t('admin.integrationsTextOnlyBody')}
             </p>
             {s?.configured && (
               <div className="flex flex-wrap items-center gap-2.5 text-[12.5px]">
-                <StatusPill tone="success">Connected</StatusPill>
+                <StatusPill tone="success">{t('admin.integrationsConnected')}</StatusPill>
                 <span className="min-w-0 flex-1 truncate text-muted">
-                  Bucket {s.bucket} · key {s.accessKeyId}
+                  {t('admin.integrationsBucketKey', { bucket: s.bucket, key: s.accessKeyId })}
                 </span>
                 <Button
                   size="xs"
@@ -689,38 +691,38 @@ function StorageSection() {
                         const r = await post<{ ok: boolean; message?: string }>('/admin/storage/test');
                         if (!r.ok) throw new Error(r.message);
                       },
-                      'R2 works',
+                      t('admin.integrationsR2Works'),
                     )
                   }
                 >
-                  Test
+                  {t('admin.integrationsTest')}
                 </Button>
               </div>
             )}
             <ol className="flex flex-col gap-4">
-              <SetupStep n={1} title="Enable R2 on your Cloudflare account" done={s?.r2Enabled === true}>
-                R2 has a free tier (10 GB), but Cloudflare asks for a payment method before turning it on.{' '}
+              <SetupStep n={1} title={t('admin.integrationsStep1Title')} done={s?.r2Enabled === true}>
+                {t('admin.integrationsStep1Body')}{' '}
                 <a href={dash} target="_blank" rel="noreferrer" className={link}>
-                  Open R2 <ExternalLink className="h-3 w-3" />
+                  {t('admin.integrationsOpenR2')} <ExternalLink className="h-3 w-3" />
                 </a>
-                {s?.r2Enabled === false && <div className="mt-1 text-warning">R2 is not enabled on this account yet.</div>}
+                {s?.r2Enabled === false && <div className="mt-1 text-warning">{t('admin.integrationsR2NotEnabled')}</div>}
               </SetupStep>
-              <SetupStep n={2} title="Create a bucket" done={s?.configured}>
+              <SetupStep n={2} title={t('admin.integrationsStep2Title')} done={s?.configured}>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <Input value={bucket} onChange={(e) => setBucket(e.target.value.toLowerCase())} className="max-w-60 font-mono text-xs" aria-label="Bucket name" />
+                  <Input value={bucket} onChange={(e) => setBucket(e.target.value.toLowerCase())} className="max-w-60 font-mono text-xs" aria-label={t('admin.integrationsBucketName')} />
                   {s?.bucketPermission ? (
-                    <Button size="sm" className="h-9" loading={busy === 'bucket'} onClick={() => run('bucket', () => post('/admin/storage/bucket', { bucket }), `Bucket ${bucket} is ready`)}>
-                      Create it for me
+                    <Button size="sm" className="h-9" loading={busy === 'bucket'} onClick={() => run('bucket', () => post('/admin/storage/bucket', { bucket }), t('admin.integrationsBucketReady', { bucket }))}>
+                      {t('admin.integrationsCreateBucket')}
                     </Button>
                   ) : (
-                    <span className="self-center text-xs text-muted">Create it in the R2 dashboard (the token lacks R2 permission), then enter its name here.</span>
+                    <span className="self-center text-xs text-muted">{t('admin.integrationsCreateInDashboard')}</span>
                   )}
                 </div>
               </SetupStep>
-              <SetupStep n={3} title="Create an R2 API token and paste its S3 keys" done={s?.configured}>
-                Permission: <b className="font-medium text-fg">Object Read &amp; Write</b>, scoped to that bucket.{' '}
+              <SetupStep n={3} title={t('admin.integrationsStep3Title')} done={s?.configured}>
+                {t('admin.integrationsStep3PermBefore')}<b className="font-medium text-fg">Object Read &amp; Write</b>{t('admin.integrationsStep3PermAfter')}{' '}
                 <a href={`${dash}/api-tokens`} target="_blank" rel="noreferrer" className={link}>
-                  Open R2 API tokens <ExternalLink className="h-3 w-3" />
+                  {t('admin.integrationsOpenR2Tokens')} <ExternalLink className="h-3 w-3" />
                 </a>
                 <form
                   className="mt-3 grid gap-2.5"
@@ -733,21 +735,21 @@ function StorageSection() {
                           setSecret('');
                           refresh();
                         }),
-                      'Attachments are on',
+                      t('admin.integrationsAttachmentsOn'),
                     );
                   }}
                 >
-                  <Input value={keyId} onChange={(e) => setKeyId(e.target.value)} placeholder="Access Key ID" className="font-mono text-xs" required />
-                  <Input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="Secret Access Key" required />
+                  <Input value={keyId} onChange={(e) => setKeyId(e.target.value)} placeholder={t('admin.integrationsAccessKeyId')} className="font-mono text-xs" required />
+                  <Input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder={t('admin.integrationsSecretAccessKey')} required />
                   <div>
                     <Button type="submit" variant="primary" loading={busy === 'connect'}>
-                      Check and turn on
+                      {t('admin.integrationsCheckAndTurnOn')}
                     </Button>
                   </div>
                 </form>
               </SetupStep>
             </ol>
-            <p className="text-xs text-faint text-pretty">The keys are stored encrypted in D1 and used through R2's S3 API, so redeploys never undo this. Mail that arrived in text-only mode stays text-only.</p>
+            <p className="text-xs text-faint text-pretty">{t('admin.integrationsKeysNote')}</p>
           </div>
         )}
       </Card>
