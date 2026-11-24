@@ -14,6 +14,7 @@ import { checkForUpdate } from './services/updates';
 import { logError } from './lib/log';
 import { refreshSenderLogos } from './services/sender-logos';
 import { generateDigestsForAllUsers } from './services/ai-digest';
+import { fetchAllExternalAccounts } from './services/external-fetch';
 
 async function safely(name: string, fn: () => Promise<unknown>): Promise<void> {
   try {
@@ -42,6 +43,8 @@ export async function handleScheduled(controller: ScheduledController, env: Env)
     await safely('unparsed', () => retryUnparsed(env));
     await safely('reparse', () => reparseQueued(env));
     await safely('domains', () => refreshPendingDomains(env));
+    // Pull external POP3/IMAP accounts into their target mailboxes.
+    await safely('external-fetch', () => fetchAllExternalAccounts(env));
   }
   // Up to 25 lookups, so on their own minute: they don't share the free plan's 50 subrequests
   // per invocation with the 10-minute jobs above.
