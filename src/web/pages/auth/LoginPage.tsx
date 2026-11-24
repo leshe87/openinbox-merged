@@ -6,8 +6,10 @@ import { Button } from '../../components/ui/button';
 import { Field, Input, PasswordInput } from '../../components/ui/form';
 import { Alert } from '../../components/ui/misc';
 import { AuthLayout } from './AuthLayout';
+import { useT } from '../../lib/i18n';
 
 export function LoginPage() {
+  const t = useT();
   const { data: session } = useSession();
   const refresh = useRefreshSession();
   const navigate = useNavigate();
@@ -34,17 +36,17 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout title={`Sign in to ${session?.instanceName ?? 'OpenInbox'}`} footer={<Link to="/recover" className="hover:text-fg">Owner locked out?</Link>}>
+    <AuthLayout title={t('auth.signInTo', { name: session?.instanceName ?? 'OpenInbox' })} footer={<Link to="/recover" className="hover:text-fg">{t('auth.ownerLockedOut')}</Link>}>
       <form onSubmit={submit} className="space-y-4">
         {error && <Alert tone="danger">{error}</Alert>}
-        <Field label="Email" id="email">
+        <Field label={t('auth.email')} id="email">
           <Input id="email" type="email" autoComplete="username" autoFocus required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourdomain.com" />
         </Field>
-        <Field label="Password" id="password">
+        <Field label={t('auth.password')} id="password">
           <PasswordInput id="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <Button type="submit" variant="primary" className="w-full justify-center" size="lg" loading={busy}>
-          Sign in
+          {t('auth.signIn')}
         </Button>
       </form>
     </AuthLayout>

@@ -6,8 +6,10 @@ import { Button } from '../../components/ui/button';
 import { Field, Input } from '../../components/ui/form';
 import { Alert } from '../../components/ui/misc';
 import { AuthLayout } from './AuthLayout';
+import { useT } from '../../lib/i18n';
 
 export function TwoFactorPage() {
+  const t = useT();
   const refresh = useRefreshSession();
   const qc = useQueryClient();
   const [code, setCode] = useState('');
@@ -29,8 +31,8 @@ export function TwoFactorPage() {
 
   return (
     <AuthLayout
-      title="Two-factor authentication"
-      subtitle="Enter the 6-digit code from your authenticator app, or one of your recovery codes."
+      title={t('auth.twoFactor')}
+      subtitle={t('auth.twoFactorSub')}
       footer={
         <button
           type="button"
@@ -40,17 +42,17 @@ export function TwoFactorPage() {
             qc.invalidateQueries({ queryKey: ['session'] });
           }}
         >
-          Use a different account
+          {t('auth.differentAccount')}
         </button>
       }
     >
       <form onSubmit={submit} className="space-y-4">
         {error && <Alert tone="danger">{error}</Alert>}
-        <Field label="Code" id="code">
+        <Field label={t('auth.code')} id="code">
           <Input id="code" inputMode="numeric" autoComplete="one-time-code" autoFocus required value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" className="text-center font-mono text-lg tracking-widest" />
         </Field>
         <Button type="submit" variant="primary" size="lg" className="w-full justify-center" loading={busy}>
-          Verify
+          {t('auth.verify')}
         </Button>
       </form>
     </AuthLayout>

@@ -5,10 +5,12 @@ import { Button } from '../../components/ui/button';
 import { Field, Input, PasswordInput } from '../../components/ui/form';
 import { Alert } from '../../components/ui/misc';
 import { AuthLayout } from './AuthLayout';
+import { useT } from '../../lib/i18n';
 
 // The owner proves control of the deployment with the recovery key, ENCRYPTION_KEY (the app's own inbox can't
 // receive a reset link while they're locked out). Other users ask an admin to reset them.
 export function RecoverPage() {
+  const t = useT();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [key, setKey] = useState('');
@@ -32,28 +34,28 @@ export function RecoverPage() {
   };
 
   return (
-    <AuthLayout title="Recover the owner account" subtitle="Members and admins: ask an admin to reset your password." footer={<Link to="/login" className="hover:text-fg">Back to sign in</Link>}>
+    <AuthLayout title={t('auth.recoverTitle')} subtitle={t('auth.recoverSub')} footer={<Link to="/login" className="hover:text-fg">{t('auth.backToSignIn')}</Link>}>
       {done ? (
         <div className="space-y-4">
-          <Alert tone="success" title="Password reset">Two-factor authentication was turned off for the owner account. Sign in and turn it back on in Account settings.</Alert>
+          <Alert tone="success" title={t('auth.resetDone')}>{t('auth.resetDoneBody')}</Alert>
           <Button variant="primary" className="w-full justify-center" onClick={() => navigate('/login')}>
-            Sign in
+            {t('auth.signIn')}
           </Button>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           {error && <Alert tone="danger">{error}</Alert>}
-          <Field label="Owner email" id="email">
+          <Field label={t('auth.ownerEmail')} id="email">
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
-          <Field label="Recovery key" id="key" hint="The key shown once during setup. It is the Worker's ENCRYPTION_KEY secret.">
+          <Field label={t('auth.recoveryKey')} id="key" hint={t('auth.recoveryKeyHint')}>
             <PasswordInput id="key" required value={key} onChange={(e) => setKey(e.target.value)} />
           </Field>
-          <Field label="New password" id="password">
+          <Field label={t('auth.newPassword')} id="password">
             <PasswordInput id="password" autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <Button type="submit" variant="primary" className="w-full justify-center" loading={busy}>
-            Reset password
+            {t('auth.resetPassword')}
           </Button>
         </form>
       )}
