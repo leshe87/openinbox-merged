@@ -6,6 +6,7 @@ import { useSession } from '../../lib/session';
 import { errorText, post } from '../../lib/api';
 import type { Session } from '../../lib/types';
 import { useTheme, useIsDark, type Theme } from '../../lib/theme';
+import { LANGUAGES, useLanguage, useT } from '../../lib/i18n';
 import { cn } from '../../lib/utils';
 import { CommandPalette, KeyCombo, SHORTCUTS } from '../../pages/mail/CommandPalette';
 import { LogoMark } from '../Logo';
@@ -15,9 +16,11 @@ import { Avatar, Kbd } from '../ui/misc';
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 export function AppShell() {
+  const t = useT();
   const { data: session } = useSession();
   const user = session?.user;
   const [theme, setTheme] = useTheme();
+  const [language, setLanguage] = useLanguage();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
@@ -71,10 +74,10 @@ export function AppShell() {
     </NavLink>
   );
 
-  const themes: { value: Theme; label: string; Icon: typeof Sun }[] = [
-    { value: 'light', label: 'Light', Icon: Sun },
-    { value: 'dark', label: 'Dark', Icon: Moon },
-    { value: 'system', label: 'System', Icon: Monitor },
+  const themes: { value: Theme; Icon: typeof Sun }[] = [
+    { value: 'light', Icon: Sun },
+    { value: 'dark', Icon: Moon },
+    { value: 'system', Icon: Monitor },
   ];
 
   // Top-bar theme toggle: switches between light and dark (based on the
@@ -93,9 +96,9 @@ export function AppShell() {
           <span className="hidden truncate text-sm font-semibold tracking-[-0.01em] md:inline">{session?.instanceName ?? 'OpenInbox'}</span>
         </NavLink>
         <nav className="flex items-center gap-0.5">
-          {nav('/mail', 'Mail', Inbox)}
-          {nav('/ai', 'AI', Sparkles)}
-          {isAdmin && nav('/admin', 'Admin', LayoutGrid)}
+          {nav('/mail', t('nav.mail'), Inbox)}
+          {nav('/ai', t('nav.ai'), Sparkles)}
+          {isAdmin && nav('/admin', t('nav.admin'), LayoutGrid)}
         </nav>
         <div className="flex-1" />
         <button
@@ -104,14 +107,14 @@ export function AppShell() {
           className="hidden h-[30px] w-60 items-center gap-2 rounded-lg border border-border bg-surface pr-1.5 pl-2.5 text-[12.5px] text-faint transition-colors hover:border-border-strong hover:text-muted sm:flex"
         >
           <Command className="h-3.5 w-3.5" />
-          <span className="flex-1 text-left">Jump to…</span>
+          <span className="flex-1 text-left">{t('shell.jumpTo')}</span>
           <Kbd>{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
         </button>
         <button
           type="button"
           onClick={cycleTheme}
-          title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-          aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+          title={isDark ? t('theme.switchToLight') : t('theme.switchToDark')}
+          aria-label={isDark ? t('theme.switchToLight') : t('theme.switchToDark')}
           className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:border-border-strong hover:text-fg"
         >
           {isDark ? <Sun className="h-[15px] w-[15px]" /> : <Moon className="h-[15px] w-[15px]" />}
@@ -119,7 +122,7 @@ export function AppShell() {
         <Menu
           className="w-[264px]"
           trigger={({ onClick, open }) => (
-            <button type="button" onClick={onClick} className={cn('rounded-full transition-shadow', open && 'ring-2 ring-[var(--ring)] ring-offset-2 ring-offset-bg')} aria-label="Account menu">
+            <button type="button" onClick={onClick} className={cn('rounded-full transition-shadow', open && 'ring-2 ring-[var(--ring)] ring-offset-2 ring-offset-bg')} aria-label={t('shell.accountMenu')}>
               <Avatar name={user?.name ?? ''} address={user?.email ?? ''} size={30} />
             </button>
           )}
@@ -133,24 +136,31 @@ export function AppShell() {
           </div>
           <MenuSeparator />
           <MenuItem icon={<UserRound />} onClick={() => navigate('/settings/profile')}>
-            Account
+            {t('menu.account')}
           </MenuItem>
           <MenuItem icon={<Settings />} onClick={() => navigate('/settings/signature')}>
-            Mail settings
+            {t('menu.mailSettings')}
           </MenuItem>
           <MenuItem icon={<Keyboard />} onClick={() => setHelp(true)} hint={<Kbd>?</Kbd>}>
-            Keyboard shortcuts
+            {t('menu.shortcuts')}
           </MenuItem>
           <MenuSeparator />
-          <MenuLabel>Theme</MenuLabel>
-          {themes.map(({ value, label, Icon }) => (
+          <MenuLabel>{t('menu.theme')}</MenuLabel>
+          {themes.map(({ value, Icon }) => (
             <MenuItem key={value} icon={<Icon />} onClick={() => setTheme(value)} checked={theme === value}>
+              {t(`menu.${value}`)}
+            </MenuItem>
+          ))}
+          <MenuSeparator />
+          <MenuLabel>{t('menu.language')}</MenuLabel>
+          {LANGUAGES.map(({ value, label }) => (
+            <MenuItem key={value} onClick={() => setLanguage(value)} checked={language === value}>
               {label}
             </MenuItem>
           ))}
           <MenuSeparator />
           <MenuItem icon={<LogOut />} onClick={signOut}>
-            Sign out
+            {t('menu.signOut')}
           </MenuItem>
           <div className="px-2 pt-1.5 pb-1 text-[11px] text-faint">OpenInbox {session?.version}</div>
         </Menu>
@@ -160,11 +170,11 @@ export function AppShell() {
       </main>
 
       {palette && <CommandPalette onClose={() => setPalette(false)} />}
-      <Dialog open={help} onClose={() => setHelp(false)} title="Keyboard shortcuts" size="lg">
+      <Dialog open={help} onClose={() => setHelp(false)} title={t('menu.shortcuts')} size="lg">
         <div className="grid gap-x-9 sm:grid-cols-2">
           {SHORTCUTS.map(([keys, label]) => (
             <div key={label} className="flex min-h-[38px] items-center justify-between gap-3 border-b border-border py-1.5 text-[13px]">
-              <span className="text-muted">{label}</span>
+              <span className="text-muted">{t(label)}</span>
               <KeyCombo keys={keys} />
             </div>
           ))}
