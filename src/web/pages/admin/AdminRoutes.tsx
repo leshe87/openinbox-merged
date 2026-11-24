@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router';
-import { Activity, Globe, Inbox, LayoutGrid, Plug, Settings, UsersRound, Waypoints } from 'lucide-react';
+import { Activity, Download, Globe, Inbox, LayoutGrid, Plug, Settings, UsersRound, Waypoints } from 'lucide-react';
 import { useSession } from '../../lib/session';
 import { useT } from '../../lib/i18n';
 import { cn } from '../../lib/utils';
@@ -9,6 +9,7 @@ import { UserDetailPage, UsersPage } from './UsersPage';
 import { InboxDetailPage, InboxesPage } from './InboxesPage';
 import { DomainsPage } from './DomainsPage';
 import { IntegrationsPage } from './IntegrationsPage';
+import { ExternalAccountsPage } from './ExternalAccountsPage';
 import { MailFlowPage } from './MailFlowPage';
 import { ActivityPage } from './ActivityPage';
 import { AdminSettingsPage } from './AdminSettingsPage';
@@ -19,6 +20,7 @@ const items = [
   { to: '/admin/users', label: 'admin.navUsers', Icon: UsersRound },
   { to: '/admin/domains', label: 'admin.navDomains', Icon: Globe },
   { to: '/admin/integrations', label: 'admin.navIntegrations', Icon: Plug },
+  { to: '/admin/external-accounts', label: 'admin.navExternalAccounts', Icon: Download },
   { to: '/admin/mailflow', label: 'admin.navMailFlow', Icon: Waypoints },
   { to: '/admin/activity', label: 'admin.navActivity', Icon: Activity },
   { to: '/admin/settings', label: 'admin.navSettings', Icon: Settings },
@@ -85,6 +87,7 @@ export default function AdminRoutes() {
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="domains" element={<DomainsPage />} />
         <Route path="integrations" element={<IntegrationsPage />} />
+        <Route path="external-accounts" element={<ExternalAccountsPage />} />
         <Route path="mailflow" element={<MailFlowPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
