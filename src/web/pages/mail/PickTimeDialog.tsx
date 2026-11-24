@@ -3,6 +3,7 @@ import { CalendarClock } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Field, Input } from '../../components/ui/form';
 import { Dialog } from '../../components/ui/overlay';
+import { useT } from '../../lib/i18n';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -24,6 +25,7 @@ export function PickTimeDialog({
 }) {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('08:00');
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const t = new Date(Date.now() + 86_400_000);
@@ -41,7 +43,7 @@ export function PickTimeDialog({
       size="sm"
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button
             variant="primary"
             disabled={!valid}
@@ -56,17 +58,17 @@ export function PickTimeDialog({
       }
     >
       <div className="grid grid-cols-[1fr_130px] gap-2.5">
-        <Field label="Date">
+        <Field label={t('picktime.date')}>
           <div className="relative">
             <CalendarClock className="pointer-events-none absolute top-1/2 left-2.5 h-[15px] w-[15px] -translate-y-1/2 text-faint" />
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="pl-8" />
           </div>
         </Field>
-        <Field label="Time">
+        <Field label={t('picktime.time')}>
           <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
       </div>
-      {date && time && !valid && <p className="mt-2 text-xs text-danger">Pick a time at least a minute from now.</p>}
+      {date && time && !valid && <p className="mt-2 text-xs text-danger">{t('picktime.tooSoon')}</p>}
     </Dialog>
   );
 }
