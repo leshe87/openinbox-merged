@@ -18,6 +18,7 @@
     {
       "binding": "DB",
       "database_name": "openinbox",
+      "database_id": "093f295e-a36e-4890-b7cf-65b5f3dc22ae",
       "migrations_dir": "src/worker/db/migrations"
     }
   ],
