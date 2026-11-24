@@ -11,15 +11,16 @@ import { ConfirmDialog, Menu, MenuItem, MenuLabel, MenuSeparator } from '../../c
 import { labelChip } from './labels';
 import { PickTimeDialog } from './PickTimeDialog';
 import { useThreadActions, useThreads, type Action, type ActionOpts, type BulkProgress } from './data';
+import { useT } from '../../lib/i18n';
 
 const OPERATORS: [string, string][] = [
-  ['from:', 'Sender name or address'],
-  ['to:', 'Recipient'],
-  ['subject:', 'Words in the subject'],
-  ['has:attachment', 'Only with files'],
-  ['is:unread', 'Unread conversations'],
-  ['in:anywhere', 'Include Archive, Spam, Trash'],
-  ['before:2026-01-31', 'Also after:'],
+  ['from:', 'mail.searchOpSender'],
+  ['to:', 'mail.searchOpRecipient'],
+  ['subject:', 'mail.searchOpSubject'],
+  ['has:attachment', 'mail.searchOpHasAttachment'],
+  ['is:unread', 'mail.searchOpUnread'],
+  ['in:anywhere', 'mail.searchOpAnywhere'],
+  ['before:2026-01-31', 'mail.searchOpBefore'],
 ];
 
 const RECENT_KEY = 'oi.recentSearches';
@@ -69,6 +70,7 @@ export function ThreadList({
   onCompose: () => void;
   searchRef: React.RefObject<HTMLInputElement | null>;
 }) {
+  const t = useT();
   const q = useThreads(mailbox, view, query);
   const act = useThreadActions();
   const [search, setSearch] = useState(query);
@@ -126,9 +128,9 @@ export function ThreadList({
     setSelected(n);
   };
   const allSelected = allMatching || (list.length > 0 && list.every((t) => selected.has(t.id)));
-  const title = view.startsWith('label-') ? (labelsById.get(Number(view.slice(6)))?.name ?? 'Label') : (VIEW_LABELS[view] ?? view);
-  const mailboxName = mailbox === 'all' ? (mailboxes.length > 1 ? 'All inboxes' : '') : (mailboxes.find((m) => String(m.id) === mailbox)?.address ?? '');
-  const heading = view === 'search' ? `Results for “${query}”` : title;
+  const title = view.startsWith('label-') ? (labelsById.get(Number(view.slice(6)))?.name ?? t('mail.labelFallback')) : t(VIEW_LABELS[view] ?? view);
+  const mailboxName = mailbox === 'all' ? (mailboxes.length > 1 ? t('mail.allInboxes') : '') : (mailboxes.find((m) => String(m.id) === mailbox)?.address ?? '');
+  const heading = view === 'search' ? t('mail.searchResults', { q: query }) : title;
   // The whole view can be selected once everything loaded is ticked and more remains on the server.
   const offerAll = allSelected && !!q.hasNextPage && view !== 'search' && view !== 'scheduled';
   const total = matchCount ? `${matchCount.count.toLocaleString()}${matchCount.capped ? '+' : ''}` : null;
@@ -144,7 +146,7 @@ export function ThreadList({
           }}
           className="flex items-center gap-2"
         >
-          <button type="button" onClick={onMenu} className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] text-muted md:hidden" aria-label="Menu">
+          <button type="button" onClick={onMenu} className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] text-muted md:hidden" aria-label={t('mail.menu')}>
             <MenuIcon className="h-5 w-5" />
           </button>
           <div
@@ -160,8 +162,8 @@ export function ThreadList({
               onChange={(e) => setSearch(e.target.value)}
               onFocus={() => setSearchOpen(true)}
               onBlur={() => setSearchOpen(false)}
-              placeholder="Search mail"
-              aria-label="Search mail"
+              placeholder={t('mail.searchMail')}
+              aria-label={t('mail.searchMail')}
               className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint md:text-[13px]"
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
@@ -180,7 +182,7 @@ export function ThreadList({
                   setSearch('');
                   onSearch('');
                 }}
-                aria-label="Clear search"
+                aria-label={t('mail.clearSearch')}
               >
                 <X className="h-[13px] w-[13px]" />
               </button>
@@ -190,13 +192,13 @@ export function ThreadList({
               </span>
             )}
           </div>
-          <button type="button" onClick={onCompose} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg md:hidden" aria-label="Compose">
+          <button type="button" onClick={onCompose} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg md:hidden" aria-label={t('mail.compose')}>
             <SquarePen className="h-[18px] w-[18px]" />
           </button>
         </form>
         {searchOpen && (
           <div className="absolute top-full right-3 left-3 z-20 -mt-1 rounded-[10px] border border-border bg-surface p-1.5 text-[13px] shadow-pop animate-fade-in" onMouseDown={(e) => e.preventDefault()}>
-            <div className="px-2 pt-1.5 pb-1 text-[11.5px] font-medium text-faint">Search operators</div>
+            <div className="px-2 pt-1.5 pb-1 text-[11.5px] font-medium text-faint">{t('mail.searchOperators')}</div>
             {OPERATORS.map(([op, d]) => (
               <button
                 key={op}
@@ -209,7 +211,7 @@ export function ThreadList({
                 className="flex h-[30px] w-full items-center gap-2.5 rounded-md px-2 text-left hover:bg-surface-2"
               >
                 <span className="min-w-[132px] font-mono text-xs font-medium text-primary-text">{op}</span>
-                <span className="truncate text-[12.5px] text-muted">{d}</span>
+                <span className="truncate text-[12.5px] text-muted">{t(d)}</span>
               </button>
             ))}
             {recent.length > 0 && (
@@ -217,7 +219,7 @@ export function ThreadList({
                 <div className="mx-0.5 my-1.5 h-px bg-border" />
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pt-1 pb-1.5 text-xs text-faint">
                   <Clock className="h-[13px] w-[13px]" />
-                  Recent:
+                  {t('mail.recent')}
                   {recent.map((r, i) => (
                     <span key={r} className="flex items-center gap-2">
                       {i > 0 && <span>·</span>}
@@ -242,27 +244,27 @@ export function ThreadList({
 
       {ids.length || allMatching ? (
         <div className="flex h-10 shrink-0 items-center gap-0.5 border-y border-border bg-primary-soft pr-2 pl-3.5 md:border-t-0">
-          <Tick checked={allSelected} indeterminate={!allSelected} onChange={(v) => setSelected(v ? new Set(list.map((t) => t.id)) : new Set())} label="Select all" className="mr-2" />
-          <span className="flex-1 truncate text-[13px] font-semibold text-primary-text">{allMatching ? (total ? `All ${total} selected` : 'All selected') : `${ids.length} selected`}</span>
-          <IconButton label="Archive" shortcut="E" onClick={() => bulk('archive', {}, 'Archived')} icon={<Archive />} className="h-7 w-7" />
+          <Tick checked={allSelected} indeterminate={!allSelected} onChange={(v) => setSelected(v ? new Set(list.map((t) => t.id)) : new Set())} label={t('mail.selectAll')} className="mr-2" />
+          <span className="flex-1 truncate text-[13px] font-semibold text-primary-text">{allMatching ? (total ? t('mail.allSelectedCount', { total }) : t('mail.allSelected')) : t('mail.nSelected', { n: ids.length })}</span>
+          <IconButton label={t('mail.archive')} shortcut="E" onClick={() => bulk('archive', {}, t('mail.archived'))} icon={<Archive />} className="h-7 w-7" />
           <IconButton
-            label={view === 'trash' ? 'Delete forever' : 'Delete'}
+            label={view === 'trash' ? t('mail.deleteForever') : t('mail.delete')}
             shortcut="#"
-            onClick={() => bulk(view === 'trash' ? 'delete' : 'trash', {}, view === 'trash' ? 'Deleted forever' : 'Moved to Trash')}
+            onClick={() => bulk(view === 'trash' ? 'delete' : 'trash', {}, view === 'trash' ? t('mail.deletedForever') : t('mail.movedToTrash'))}
             icon={<Trash2 />}
             className="h-7 w-7"
           />
-          <IconButton label="Report spam" shortcut="!" onClick={() => bulk('spam', {}, 'Marked as spam')} icon={<OctagonAlert />} className="h-7 w-7" />
-          <IconButton label="Mark read" onClick={() => bulk('read')} icon={<MailOpen />} className="h-7 w-7" />
-          <IconButton label="Mark unread" onClick={() => bulk('unread')} icon={<Mail />} className="h-7 w-7" />
-          {view !== 'inbox' && <IconButton label="Move to Inbox" onClick={() => bulk('inbox', {}, 'Moved to Inbox')} icon={<Inbox />} className="h-7 w-7" />}
+          <IconButton label={t('mail.reportSpam')} shortcut="!" onClick={() => bulk('spam', {}, t('mail.markedAsSpam'))} icon={<OctagonAlert />} className="h-7 w-7" />
+          <IconButton label={t('mail.markRead')} onClick={() => bulk('read')} icon={<MailOpen />} className="h-7 w-7" />
+          <IconButton label={t('mail.markUnread')} onClick={() => bulk('unread')} icon={<Mail />} className="h-7 w-7" />
+          {view !== 'inbox' && <IconButton label={t('mail.moveToInbox')} onClick={() => bulk('inbox', {}, t('mail.movedToInbox'))} icon={<Inbox />} className="h-7 w-7" />}
           <Menu
             className="w-[250px]"
             trigger={({ onClick, open }) => (
               <button
                 type="button"
                 onClick={onClick}
-                aria-label="Snooze"
+                aria-label={t('mail.snooze')}
                 className={cn('flex h-7 items-center gap-[3px] rounded-[7px] px-1.5 text-muted hover:text-fg', open && 'bg-surface text-fg shadow-card')}
               >
                 <AlarmClock className="h-[15px] w-[15px]" />
@@ -270,15 +272,15 @@ export function ThreadList({
               </button>
             )}
           >
-            <MenuLabel>Snooze until</MenuLabel>
+            <MenuLabel>{t('mail.snoozeUntil')}</MenuLabel>
             {snoozePresets().map((p) => (
-              <MenuItem key={p.label} onClick={() => bulk('snooze', { until: p.at }, 'Snoozed')} hint={timeHint(p.at)}>
-                {p.label}
+              <MenuItem key={p.label} onClick={() => bulk('snooze', { until: p.at }, t('mail.snoozed'))} hint={timeHint(p.at)}>
+                {t(p.label)}
               </MenuItem>
             ))}
             <MenuSeparator />
             <MenuItem icon={<CalendarClock />} onClick={() => setPickSnooze(true)}>
-              Pick date and time…
+              {t('mail.pickDateTime')}
             </MenuItem>
           </Menu>
         </div>
@@ -287,23 +289,23 @@ export function ThreadList({
           <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin text-primary-text" />
           <span className="truncate">
             {progress.verb} {progress.done.toLocaleString()}
-            {progress.total !== null && ` of ${progress.total.toLocaleString()}`}…
+            {progress.total !== null && t('mail.progressOf', { total: progress.total.toLocaleString() })}…
           </span>
         </div>
       ) : (
         // One heading for both layouts: large on phones, a compact list header on desktop.
         <div className="flex shrink-0 items-baseline gap-2.5 px-[18px] pt-1.5 pb-2.5 md:h-10 md:items-center md:border-b md:border-border md:pt-0 md:pr-2.5 md:pb-0 md:pl-3.5">
-          <Tick checked={false} onChange={(v) => v && setSelected(new Set(list.map((t) => t.id)))} label="Select all" className="max-md:hidden" />
+          <Tick checked={false} onChange={(v) => v && setSelected(new Set(list.map((t) => t.id)))} label={t('mail.selectAll')} className="max-md:hidden" />
           <div className="min-w-0 flex-1 truncate text-xl font-semibold tracking-[-0.02em] md:text-[13px] md:tracking-normal">
             {heading}
             {mailboxName && <span className="text-[13px] font-normal tracking-normal text-faint max-md:ml-2 md:before:content-['_·_']">{mailboxName}</span>}
           </div>
           {(view === 'spam' || view === 'trash') && list.length > 0 && (
             <Button size="xs" variant="ghost" className="hover:text-danger" onClick={() => setConfirmEmpty(true)}>
-              Empty {view}
+              {t('mail.emptyView', { view: title })}
             </Button>
           )}
-          <IconButton label="Refresh" onClick={() => q.refetch()} icon={<RefreshCw className={cn(q.isFetching && 'animate-spin text-primary-text')} />} className="h-7 w-7 max-md:hidden" />
+          <IconButton label={t('mail.refresh')} onClick={() => q.refetch()} icon={<RefreshCw className={cn(q.isFetching && 'animate-spin text-primary-text')} />} className="h-7 w-7 max-md:hidden" />
         </div>
       )}
 
@@ -312,17 +314,17 @@ export function ThreadList({
           {allMatching ? (
             <>
               <span>
-                All {total ? `${total} ` : ''}conversations in {title} are selected.
+                {t('mail.allConversationsSelected', { total: total ? `${total} ` : '', view: title })}
               </span>
               <button type="button" className="font-medium text-primary-text hover:underline" onClick={() => setSelected(new Set())}>
-                Clear selection
+                {t('mail.clearSelection')}
               </button>
             </>
           ) : (
             <>
-              <span>All {list.length.toLocaleString()} loaded conversations are selected.</span>
+              <span>{t('mail.loadedSelected', { n: list.length.toLocaleString() })}</span>
               <button type="button" className="font-medium text-primary-text hover:underline" onClick={() => setAllMatching(true)}>
-                Select all {total ? `${total} ` : ''}conversations in {title}
+                {t('mail.selectAllInView', { total: total ? `${total} ` : '', view: title })}
               </button>
             </>
           )}
@@ -351,7 +353,7 @@ export function ThreadList({
             })}
             <div className="flex h-11 items-center justify-center gap-2 text-[12.5px] text-faint">
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-              Loading…
+              {t('mail.loading')}
             </div>
           </div>
         ) : list.length === 0 ? (
@@ -360,17 +362,17 @@ export function ThreadList({
               <div className="mb-4 grid h-12 w-12 place-items-center rounded-[14px] bg-surface-2 text-muted">
                 <SearchX className="h-[22px] w-[22px]" />
               </div>
-              <div className="text-[15px] font-semibold">No results</div>
-              <div className="mt-1 text-[13px] text-muted text-pretty">Nothing matches. Try fewer words, or widen the search.</div>
+              <div className="text-[15px] font-semibold">{t('mail.noResults')}</div>
+              <div className="mt-1 text-[13px] text-muted text-pretty">{t('mail.noResultsHint')}</div>
               <div className="mt-5 flex w-full max-w-[300px] flex-col gap-2 rounded-[10px] border border-border bg-surface px-3.5 py-3 text-left text-[12.5px] text-muted">
                 {[
-                  ['in:anywhere', 'Include Archive, Spam, Trash'],
-                  ['from:ann', 'Matches name or address'],
-                  ['has:attachment', 'Only with files'],
+                  ['in:anywhere', 'mail.searchOpAnywhere'],
+                  ['from:ann', 'mail.searchOpMatchesName'],
+                  ['has:attachment', 'mail.searchOpHasAttachment'],
                 ].map(([op, d]) => (
                   <div key={op} className="flex gap-2.5">
                     <span className="min-w-24 font-mono text-xs leading-[18px] font-medium text-primary-text">{op}</span>
-                    {d}
+                    {t(d)}
                   </div>
                 ))}
               </div>
@@ -380,26 +382,26 @@ export function ThreadList({
               <div className={cn('mb-4 grid h-12 w-12 place-items-center rounded-[14px]', view === 'inbox' ? 'bg-success-soft text-success' : 'bg-surface-2 text-muted')}>
                 {view === 'inbox' ? <CircleCheck className="h-[22px] w-[22px]" /> : <Inbox className="h-[22px] w-[22px]" />}
               </div>
-              <div className="text-[15px] font-semibold">{view === 'inbox' ? 'Inbox zero' : 'Nothing here'}</div>
-              {view === 'inbox' && <div className="mt-1 text-[13px] text-muted">New mail shows up here automatically.</div>}
+              <div className="text-[15px] font-semibold">{view === 'inbox' ? t('mail.inboxZero') : t('mail.nothingHere')}</div>
+              {view === 'inbox' && <div className="mt-1 text-[13px] text-muted">{t('mail.newMailHere')}</div>}
             </div>
           )
         ) : (
           <ul>
-            {list.map((t, i) => {
-              const unread = t.unreadCount > 0;
-              const active = activeId === t.id;
-              const isSelected = allMatching || selected.has(t.id);
-              const participants = view === 'sent' || view === 'drafts' ? participantLabel(t.participants, new Set()) : participantLabel(t.participants, own);
-              const first = t.participants.find((p) => !own.has(p.address.toLowerCase())) ?? t.participants[0];
+            {list.map((th, i) => {
+              const unread = th.unreadCount > 0;
+              const active = activeId === th.id;
+              const isSelected = allMatching || selected.has(th.id);
+              const participants = view === 'sent' || view === 'drafts' ? participantLabel(th.participants, new Set()) : participantLabel(th.participants, own);
+              const first = th.participants.find((p) => !own.has(p.address.toLowerCase())) ?? th.participants[0];
               const strong = unread || active;
               return (
                 <li
-                  key={t.id}
+                  key={th.id}
                   data-index={i}
                   onClick={() => {
                     setFocusIndex(i);
-                    onOpen(t);
+                    onOpen(th);
                   }}
                   className={cn(
                     'group relative flex cursor-pointer gap-3 border-b border-border px-4 py-3 transition-colors md:gap-[11px] md:px-3.5 md:py-2.5',
@@ -412,10 +414,10 @@ export function ThreadList({
                   <button
                     type="button"
                     className="shrink-0 md:hidden"
-                    aria-label={isSelected ? 'Deselect' : 'Select'}
+                    aria-label={isSelected ? t('mail.deselect') : t('mail.select')}
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggle(t.id);
+                      toggle(th.id);
                     }}
                   >
                     {isSelected ? (
@@ -427,39 +429,39 @@ export function ThreadList({
                     )}
                   </button>
                   <div className="hidden flex-col items-center gap-[9px] pt-0.5 md:flex">
-                    <Tick checked={isSelected} onChange={() => toggle(t.id)} label="Select" />
+                    <Tick checked={isSelected} onChange={() => toggle(th.id)} label={t('mail.select')} />
                     <button
                       type="button"
-                      aria-label={t.starred ? 'Unstar' : 'Star'}
+                      aria-label={th.starred ? t('mail.unstar') : t('mail.star')}
                       onClick={(e) => {
                         e.stopPropagation();
-                        act([t.id], t.starred ? 'unstar' : 'star');
+                        act([th.id], th.starred ? 'unstar' : 'star');
                       }}
                     >
-                      <Star className={cn('h-[15px] w-[15px]', t.starred ? 'fill-[oklch(0.78_0.16_78)] text-[oklch(0.78_0.16_78)]' : 'text-transparent group-hover:text-faint')} />
+                      <Star className={cn('h-[15px] w-[15px]', th.starred ? 'fill-[oklch(0.78_0.16_78)] text-[oklch(0.78_0.16_78)]' : 'text-transparent group-hover:text-faint')} />
                     </button>
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-px">
                     <div className="flex items-center gap-1.5 text-sm leading-[19px] md:text-[13px]">
                       <span className={cn('min-w-0 flex-1 truncate', unread ? 'font-semibold' : 'font-medium', strong ? 'text-fg' : 'text-muted')}>
-                        {t.draftCount > 0 && (
+                        {th.draftCount > 0 && (
                           <>
-                            <span className="font-semibold text-danger">Draft</span>
+                            <span className="font-semibold text-danger">{t('mail.draft')}</span>
                             <span className="text-faint">, </span>
                           </>
                         )}
-                        {participants || '(unknown)'}
-                        {t.messageCount > 1 && <span className="ml-1.5 text-xs font-normal text-faint">{t.messageCount}</span>}
+                        {participants || t('mail.unknownParticipant')}
+                        {th.messageCount > 1 && <span className="ml-1.5 text-xs font-normal text-faint">{th.messageCount}</span>}
                       </span>
-                      {t.hasAttachments && <Paperclip className="h-[13px] w-[13px] shrink-0 text-faint" />}
-                      {t.starred && <Star className="h-3 w-3 shrink-0 fill-[oklch(0.78_0.16_78)] text-[oklch(0.78_0.16_78)] md:hidden" />}
+                      {th.hasAttachments && <Paperclip className="h-[13px] w-[13px] shrink-0 text-faint" />}
+                      {th.starred && <Star className="h-3 w-3 shrink-0 fill-[oklch(0.78_0.16_78)] text-[oklch(0.78_0.16_78)] md:hidden" />}
                       <span className={cn('shrink-0 text-xs tabular-nums', unread ? 'font-semibold text-fg' : 'text-faint')}>
-                        {listDate(view === 'sent' && t.lastSentAt ? t.lastSentAt : view === 'snoozed' && t.snoozedUntil ? t.snoozedUntil : t.lastMessageAt)}
+                        {listDate(view === 'sent' && th.lastSentAt ? th.lastSentAt : view === 'snoozed' && th.snoozedUntil ? th.snoozedUntil : th.lastMessageAt)}
                       </span>
                     </div>
-                    <div className={cn('truncate text-[13.5px] leading-[19px] md:text-[13px]', unread ? 'font-semibold' : 'font-[450]', strong ? 'text-fg' : 'text-muted')}>{t.subject || '(no subject)'}</div>
+                    <div className={cn('truncate text-[13.5px] leading-[19px] md:text-[13px]', unread ? 'font-semibold' : 'font-[450]', strong ? 'text-fg' : 'text-muted')}>{th.subject || t('mail.noSubject')}</div>
                     <div className="flex min-w-0 items-center gap-[5px] text-[13px] leading-[19px]">
-                      {t.labels.slice(0, 3).map((id) => {
+                      {th.labels.slice(0, 3).map((id) => {
                         const l = labelsById.get(id);
                         return l ? (
                           <span key={id} className="label-chip inline-flex h-[18px] shrink-0 items-center rounded-[5px] px-1.5 text-[11.5px] font-medium" style={labelChip(l.color)}>
@@ -467,7 +469,7 @@ export function ThreadList({
                           </span>
                         ) : null;
                       })}
-                      <span className="min-w-0 flex-1 truncate text-faint">{t.snippet}</span>
+                      <span className="min-w-0 flex-1 truncate text-faint">{th.snippet}</span>
                     </div>
                   </div>
                 </li>
@@ -479,7 +481,7 @@ export function ThreadList({
         {q.isFetchingNextPage && (
           <div className="flex items-center justify-center gap-2 pb-4 text-[12.5px] text-faint">
             <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-            Loading…
+            {t('mail.loading')}
           </div>
         )}
       </div>
@@ -487,25 +489,25 @@ export function ThreadList({
       <PickTimeDialog
         open={pickSnooze}
         onClose={() => setPickSnooze(false)}
-        title="Snooze until"
-        description="The conversation leaves the inbox and comes back at this time."
-        confirmLabel="Snooze"
-        onPick={(at) => bulk('snooze', { until: at }, 'Snoozed')}
+        title={t('mail.snoozeUntil')}
+        description={t('mail.snoozeDesc')}
+        confirmLabel={t('mail.snooze')}
+        onPick={(at) => bulk('snooze', { until: at }, t('mail.snoozed'))}
       />
       <ConfirmDialog
         open={confirmEmpty}
         onClose={() => setConfirmEmpty(false)}
         icon={<Trash2 />}
         danger
-        title={`Empty ${view}?`}
-        confirmLabel="Delete forever"
+        title={t('mail.emptyViewConfirm', { view: title })}
+        confirmLabel={t('mail.deleteForever')}
         onConfirm={() => {
           setConfirmEmpty(false);
           // Everything in the view, not only the loaded rows.
-          onBulk('delete', {}, 'Deleted forever', true);
+          onBulk('delete', {}, t('mail.deletedForever'), true);
         }}
       >
-        {emptyCount ? `The ${emptyCount} conversations` : 'All conversations'} in {title} are deleted forever. This can't be undone.
+        {emptyCount ? t('mail.emptyConfirmCount', { n: emptyCount, view: title }) : t('mail.emptyConfirmAll', { view: title })}
       </ConfirmDialog>
     </div>
   );

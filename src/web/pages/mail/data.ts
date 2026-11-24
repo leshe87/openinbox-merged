@@ -4,6 +4,7 @@ import { get, post } from '../../lib/api';
 import { viewQuery } from '../../lib/mail';
 import type { Mailbox, ThreadDetail, ThreadSummary } from '../../lib/types';
 import { storageGet } from '../../lib/utils';
+import { t } from '../../lib/i18n';
 
 export function useMailboxes() {
   return useQuery({ queryKey: ['mailboxes'], queryFn: () => get<Mailbox[]>('/mailboxes'), staleTime: 60_000 });
@@ -166,7 +167,7 @@ export function useMailSync(mailboxes: Mailbox[] | undefined) {
           const boxes = qc.getQueryData<Mailbox[]>(['mailboxes']) ?? [];
           const after = boxes.reduce((n, m) => n + (m.unread.inbox ?? 0), 0);
           if (after > before && document.hidden && storageGet('oi.notify', false) && 'Notification' in window && Notification.permission === 'granted') {
-            const n = new Notification('New mail', { body: `${after - before} new conversation${after - before === 1 ? '' : 's'} in your inbox`, tag: 'openinbox-new-mail', icon: '/icon-192.png' });
+            const n = new Notification(t('mail.newMailTitle'), { body: t('mail.newMailBody', { n: after - before, s: after - before === 1 ? '' : 's' }), tag: 'openinbox-new-mail', icon: '/icon-192.png' });
             n.onclick = () => window.focus();
           }
         }

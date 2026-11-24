@@ -5,6 +5,7 @@ import { useDebounced } from '../../lib/hooks';
 import { cn } from '../../lib/utils';
 import { Avatar } from '../../components/ui/misc';
 import type { Address } from '../../lib/types';
+import { useT } from '../../lib/i18n';
 
 const VALID = /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]+$/;
 
@@ -37,6 +38,7 @@ export function RecipientInput({
   bare?: boolean;
   trailing?: ReactNode;
 }) {
+  const t = useT();
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -122,19 +124,19 @@ export function RecipientInput({
             <span key={a.address} title={a.address} className="inline-flex h-6 max-w-full items-center gap-1.5 rounded-full border border-border bg-surface-2 pr-1.5 pl-[3px] text-[12.5px]">
               <Avatar name={a.name} address={a.address} size={18} />
               <span className="truncate">{a.name || a.address}</span>
-              <button type="button" className="text-faint hover:text-fg" onClick={() => onChange(value.filter((v) => v.address !== a.address))} aria-label={`Remove ${a.address}`}>
+              <button type="button" className="text-faint hover:text-fg" onClick={() => onChange(value.filter((v) => v.address !== a.address))} aria-label={t('mail.removeRecipient', { address: a.address })}>
                 <X className="h-3 w-3" />
               </button>
             </span>
           ) : (
             <span
               key={a.address}
-              title="Not a valid address"
+              title={t('mail.invalidAddressTitle')}
               className="inline-flex h-6 max-w-full items-center gap-[5px] rounded-full border border-dashed border-[color-mix(in_oklch,var(--danger)_55%,transparent)] bg-danger-soft pr-1.5 pl-[7px] text-[12.5px] text-danger"
             >
               <CircleAlert className="h-3 w-3 shrink-0" />
               <span className="truncate">{a.address}</span>
-              <button type="button" className="opacity-70 hover:opacity-100" onClick={() => onChange(value.filter((v) => v.address !== a.address))} aria-label={`Remove ${a.address}`}>
+              <button type="button" className="opacity-70 hover:opacity-100" onClick={() => onChange(value.filter((v) => v.address !== a.address))} aria-label={t('mail.removeRecipient', { address: a.address })}>
                 <X className="h-3 w-3" />
               </button>
             </span>

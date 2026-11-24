@@ -11,20 +11,21 @@ import { ThreadList } from './ThreadList';
 import { ThreadView } from './ThreadView';
 import { useMailboxes, useMailSync, useThreadActions, useThreads, useViewAction, useViewCount, type Action, type ActionOpts, type BulkProgress } from './data';
 import { useToast } from '../../components/ui/overlay';
+import { useT } from '../../lib/i18n';
 import { Kbd, PageSpinner } from '../../components/ui/misc';
 import type { ThreadSummary } from '../../lib/types';
 
 const BULK_VERBS: Partial<Record<Action, string>> = {
-  archive: 'Archiving',
-  inbox: 'Moving to Inbox',
-  trash: 'Moving to Trash',
-  delete: 'Deleting',
-  spam: 'Marking as spam',
-  read: 'Marking as read',
-  unread: 'Marking as unread',
-  star: 'Starring',
-  unstar: 'Unstarring',
-  snooze: 'Snoozing',
+  archive: 'mail.bulkArchiving',
+  inbox: 'mail.bulkMovingToInbox',
+  trash: 'mail.bulkMovingToTrash',
+  delete: 'mail.bulkDeleting',
+  spam: 'mail.bulkMarkingSpam',
+  read: 'mail.bulkMarkingRead',
+  unread: 'mail.bulkMarkingUnread',
+  star: 'mail.bulkStarring',
+  unstar: 'mail.bulkUnstarring',
+  snooze: 'mail.bulkSnoozing',
 };
 
 export default function MailPage() {
@@ -44,6 +45,7 @@ function isTyping(e: KeyboardEvent): boolean {
 }
 
 function MailApp() {
+  const t = useT();
   const params = useParams();
   const [search] = useSearchParams();
   const navigate = useNavigate();
@@ -90,24 +92,24 @@ function MailApp() {
     (action: Action, opts: ActionOpts = {}, label?: string, whole = allMatching) => {
       if (whole) {
         if (progress) {
-          toast.info('Wait for the current action to finish.');
+          toast.info(t('mail.waitForCurrentAction'));
           return;
         }
         setSelected(new Set());
-        setProgress({ verb: BULK_VERBS[action] ?? 'Updating', done: 0, total: matchCount && !matchCount.capped ? matchCount.count : null });
+        setProgress({ verb: t(BULK_VERBS[action] ?? 'mail.bulkUpdating'), done: 0, total: matchCount && !matchCount.capped ? matchCount.count : null });
         viewAction(mailboxParam, view, action, opts, (done) => setProgress((p) => p && { ...p, done }))
-          .then((n) => toast.success(`${label ?? 'Updated'} · ${n.toLocaleString()} conversation${n === 1 ? '' : 's'}`))
-          .catch((e: Error & { done?: number }) => toast.error(`Stopped after ${(e.done ?? 0).toLocaleString()} conversations: ${errorText(e)}`))
+          .then((n) => toast.success(t('mail.bulkDone', { label: label ?? t('mail.updated'), n: n.toLocaleString(), s: n === 1 ? '' : 's' })))
+          .catch((e: Error & { done?: number }) => toast.error(t('mail.bulkStopped', { n: (e.done ?? 0).toLocaleString(), error: errorText(e) })))
           .finally(() => setProgress(null));
         return;
       }
       if (!selected.size) return;
       act([...selected], action, opts)
         .then(() => label && toast.success(label))
-        .catch(() => toast.error('Something went wrong.'));
+        .catch(() => toast.error(t('mail.somethingWrong')));
       setSelected(new Set());
     },
-    [allMatching, progress, matchCount, mailboxParam, view, selected, act, viewAction, setSelected, toast],
+    [allMatching, progress, matchCount, mailboxParam, view, selected, act, viewAction, setSelected, toast, t],
   );
 
   const base = `/mail/${mailboxParam}/${view}`;
@@ -145,7 +147,7 @@ function MailApp() {
       const boxes = (mailboxes ?? []).filter((m) => m.canSend);
       const preferred = boxes.find((m) => String(m.id) === mailboxParam) ?? boxes[0];
       if (!preferred && !state?.mailboxId) {
-        toast.error('You cannot send from any inbox. Ask an admin for access.');
+        toast.error(t('mail.cannotSend'));
         return;
       }
       const box = (mailboxes ?? []).find((m) => m.id === state?.mailboxId) ?? preferred!;
@@ -163,7 +165,7 @@ function MailApp() {
       };
       setComposers((cs) => (cs.some((c) => c.key === full.key) ? cs : [...cs.slice(-1), full]));
     },
-    [mailboxes, mailboxParam, toast],
+    [mailboxes, mailboxParam, toast, t],
   );
 
   // mailto: style links, e.g. /mail/all/inbox?compose=ann@example.com (empty: a blank message).
@@ -197,29 +199,29 @@ function MailApp() {
     async (id: number, sendAt?: number | null) => {
       // A failed send stays in the thread as a failed message; Retry sends it again.
       const retry = {
-        label: 'Retry',
+        label: t('mail.retry'),
         onClick: () =>
           post<{ status: string; error?: string }>(`/messages/${id}/retry`)
-            .then((r) => (r.status === 'sent' ? toast.success('Message sent') : toast.error(r.error ? `Not sent: ${r.error}` : 'Still not sent.')))
+            .then((r) => (r.status === 'sent' ? toast.success(t('mail.messageSent')) : toast.error(r.error ? t('mail.notSentWithError', { error: r.error }) : t('mail.stillNotSent'))))
             .catch((e) => toast.error(errorText(e)))
             .finally(refresh),
       };
       try {
         const r = await post<{ status: string; error?: string }>(`/drafts/${id}/send`, { sendAt: sendAt ?? null });
-        if (r.status === 'sent') toast.success('Message sent');
+        if (r.status === 'sent') toast.success(t('mail.messageSent'));
         else if (r.status === 'scheduled')
-          toast.success(`Scheduled for ${fullDate(sendAt!)}`, {
-            label: 'Undo',
-            onClick: () => post(`/messages/${id}/cancel-schedule`).then(() => toast.success('Moved back to drafts')).catch((e) => toast.error(errorText(e))).finally(refresh),
+          toast.success(t('mail.scheduledFor', { date: fullDate(sendAt!) }), {
+            label: t('mail.undo'),
+            onClick: () => post(`/messages/${id}/cancel-schedule`).then(() => toast.success(t('mail.movedBackToDrafts'))).catch((e) => toast.error(errorText(e))).finally(refresh),
           });
-        else toast.error(r.error ? `Not sent: ${r.error}` : 'Not sent.', retry);
+        else toast.error(r.error ? t('mail.notSentWithError', { error: r.error }) : t('mail.notSent'), retry);
       } catch (e) {
-        toast.error(`Not sent: ${errorText(e)}`);
+        toast.error(t('mail.notSentWithError', { error: errorText(e) }));
       } finally {
         refresh();
       }
     },
-    [refresh, toast],
+    [refresh, toast, t],
   );
 
   // Undo send: the message waits a few seconds in the browser before it goes out.
@@ -235,9 +237,9 @@ function MailApp() {
       }, UNDO_MS);
       pending.current.set(r.draftId, timer);
       toast.pending(
-        'Sending…',
+        t('mail.sending'),
         {
-          label: 'Undo',
+          label: t('mail.undo'),
           onClick: () => {
             clearTimeout(timer);
             pending.current.delete(r.draftId);
@@ -247,7 +249,7 @@ function MailApp() {
         UNDO_MS,
       );
     },
-    [doSend, openCompose, toast],
+    [doSend, openCompose, toast, t],
   );
 
   // Leaving the page sends anything still waiting for its undo window.
@@ -335,18 +337,18 @@ function MailApp() {
           }
           break;
         case 'e':
-          if (onSelection) bulkAction(view === 'archive' ? 'inbox' : 'archive', {}, view === 'archive' ? 'Moved to Inbox' : 'Archived');
-          else if (target.length) act(target, view === 'archive' ? 'inbox' : 'archive').then(() => toast.success(view === 'archive' ? 'Moved to Inbox' : 'Archived'));
+          if (onSelection) bulkAction(view === 'archive' ? 'inbox' : 'archive', {}, view === 'archive' ? t('mail.movedToInbox') : t('mail.archived'));
+          else if (target.length) act(target, view === 'archive' ? 'inbox' : 'archive').then(() => toast.success(view === 'archive' ? t('mail.movedToInbox') : t('mail.archived')));
           leave();
           break;
         case '#':
-          if (onSelection) bulkAction('trash', {}, 'Moved to Trash');
-          else if (target.length) act(target, 'trash').then(() => toast.success('Moved to Trash'));
+          if (onSelection) bulkAction('trash', {}, t('mail.movedToTrash'));
+          else if (target.length) act(target, 'trash').then(() => toast.success(t('mail.movedToTrash')));
           leave();
           break;
         case '!':
-          if (onSelection) bulkAction('spam', {}, 'Marked as spam');
-          else if (target.length) act(target, 'spam').then(() => toast.success('Marked as spam'));
+          if (onSelection) bulkAction('spam', {}, t('mail.markedAsSpam'));
+          else if (target.length) act(target, 'spam').then(() => toast.success(t('mail.markedAsSpam')));
           leave();
           break;
         case 's': {
@@ -375,16 +377,16 @@ function MailApp() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [list, focusIndex, selected, allMatching, threadId, view, base, suffix, mailboxParam, navigate, openCompose, openThread, act, bulkAction, setSelected, toast]);
+  }, [list, focusIndex, selected, allMatching, threadId, view, base, suffix, mailboxParam, navigate, openCompose, openThread, act, bulkAction, setSelected, toast, t]);
 
   // The browser tab shows the unread count.
   useEffect(() => {
     const unread = (mailboxes ?? []).reduce((n, m) => n + (m.unread.inbox ?? 0), 0);
-    document.title = unread ? `(${unread}) Inbox · OpenInbox` : 'OpenInbox';
+    document.title = unread ? t('mail.tabTitleUnread', { n: unread }) : 'OpenInbox';
     return () => {
       document.title = 'OpenInbox';
     };
-  }, [mailboxes]);
+  }, [mailboxes, t]);
 
   if (isLoading || !mailboxes) return <PageSpinner />;
 
@@ -451,9 +453,9 @@ function MailApp() {
             <div className="mb-[18px] grid h-[52px] w-[52px] place-items-center rounded-[15px] border border-border bg-surface text-faint shadow-card">
               <Inbox className="h-[22px] w-[22px]" />
             </div>
-            <div className="text-[15px] font-semibold">Select a conversation</div>
+            <div className="text-[15px] font-semibold">{t('mail.selectConversation')}</div>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[13px] text-muted">
-              Press <Kbd>c</Kbd> to compose, <Kbd>/</Kbd> to search, <Kbd>?</Kbd> for shortcuts
+              {t('mail.press')} <Kbd>c</Kbd> {t('mail.toCompose')} <Kbd>/</Kbd> {t('mail.toSearch')} <Kbd>?</Kbd> {t('mail.forShortcuts')}
             </div>
           </div>
         )}
