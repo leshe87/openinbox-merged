@@ -10,6 +10,7 @@ import { RecoverPage } from './pages/auth/RecoverPage';
 import { TwoFactorPage } from './pages/auth/TwoFactorPage';
 import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
 import { AppShell } from './components/layout/AppShell';
+import { useT } from './lib/i18n';
 
 // Larger areas load on demand (the mail client pulls in the rich text editor).
 const MailPage = lazy(() => import('./pages/mail/MailPage'));
@@ -18,13 +19,14 @@ const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const AiRoutes = lazy(() => import('./pages/ai/AiRoutes'));
 
 export function App() {
+  const t = useT();
   const { data: session, isLoading, error, refetch } = useSession();
   if (isLoading) return <PageSpinner />;
   if (!session) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <p className="text-sm text-muted">OpenInbox could not reach its API: {errorText(error)}</p>
-        <Button onClick={() => refetch()}>Try again</Button>
+        <p className="text-sm text-muted">{t('app.apiUnreachable', { error: errorText(error) })}</p>
+        <Button onClick={() => refetch()}>{t('app.tryAgain')}</Button>
       </div>
     );
   }
