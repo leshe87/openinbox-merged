@@ -14,6 +14,7 @@ import { AppShell } from './components/layout/AppShell';
 // Larger areas load on demand (the mail client pulls in the rich text editor).
 const MailPage = lazy(() => import('./pages/mail/MailPage'));
 const AdminRoutes = lazy(() => import('./pages/admin/AdminRoutes'));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const AiRoutes = lazy(() => import('./pages/ai/AiRoutes'));
 
 export function App() {
@@ -53,6 +54,7 @@ export function App() {
         <Route element={<AppShell />}>
           <Route path="/mail/*" element={<MailPage />} />
           {isAdmin && <Route path="/admin/*" element={<AdminRoutes />} />}
+          <Route path="/settings/*" element={<SettingsPage />} />
           <Route path="/ai/*" element={<AiRoutes />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to={isAdmin ? '/admin' : '/mail'} replace />} />
