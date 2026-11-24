@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Check, ChevronDown, CircleCheck, CircleDashed, CircleX, Cloud, Download, ExternalLink, KeyRound, LoaderCircle, Mail, RefreshCw, ShieldCheck, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { ApiError, errorText, get, post } from '../../lib/api';
+import { useT } from '../../lib/i18n';
 import { cn, downloadBlob } from '../../lib/utils';
 import { runDomainSetup } from '../../lib/domain-setup';
 import { ACCOUNT_TOKENS_URL, tokenTemplateUrl, TOKEN_PERMISSIONS } from '../../../shared/constants';
@@ -39,6 +40,7 @@ interface SetupStatus {
 type Stage = 'checks' | 'admin' | 'domain' | 'done';
 
 export function SetupPage() {
+  const t = useT();
   const [stage, setStage] = useState<Stage>('checks');
   const [claim, setClaim] = useState<{ domainId: number; address: string; domain: string } | null>(null);
   // The generated recovery key, kept only in this page's memory: the server shows it once.
@@ -70,9 +72,9 @@ export function SetupPage() {
   };
 
   const steps: { id: Stage; label: string }[] = [
-    { id: 'checks', label: 'Connect Cloudflare' },
-    { id: 'admin', label: 'Create your account' },
-    { id: 'domain', label: 'Set up mail' },
+    { id: 'checks', label: 'setup.stepCloudflare' },
+    { id: 'admin', label: 'setup.stepAdmin' },
+    { id: 'domain', label: 'setup.stepDomain' },
   ];
   const current = stage === 'done' ? 3 : steps.findIndex((s) => s.id === stage);
 
@@ -81,8 +83,8 @@ export function SetupPage() {
       <div className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
         <div className="mb-8 flex flex-col items-center text-center">
           <LogoMark size={48} />
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight">Welcome to OpenInbox</h1>
-          <p className="mt-1.5 max-w-md text-sm text-muted">Your own email on your own domains, running in your Cloudflare account. Setup takes about two minutes.</p>
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight">{t('setup.welcome')}</h1>
+          <p className="mt-1.5 max-w-md text-sm text-muted">{t('setup.welcomeSub')}</p>
         </div>
         <ol className="mb-6 flex items-center justify-center gap-2 text-[13px]">
           {steps.map((s, i) => (
@@ -95,7 +97,7 @@ export function SetupPage() {
               >
                 {i < current ? <Check className="h-3.5 w-3.5" /> : i + 1}
               </span>
-              <span className={cn('hidden sm:inline', i === current ? 'font-medium text-fg' : 'text-muted')}>{s.label}</span>
+              <span className={cn('hidden sm:inline', i === current ? 'font-medium text-fg' : 'text-muted')}>{t(s.label)}</span>
               {i < steps.length - 1 && <span className="mx-1 h-px w-6 bg-border-strong sm:w-10" />}
             </li>
           ))}
@@ -198,12 +200,13 @@ function ResultLine({ check, children }: { check: Check; children?: ReactNode })
 
 // While a check runs, step 4 lists what it is looking up.
 function PendingLines({ items }: { items: string[] }) {
+  const t = useT();
   return (
     <div className="mt-2 rounded-lg border border-border px-3 py-1">
       {items.map((label) => (
         <div key={label} className="flex items-center gap-2.5 py-1.5 text-[13px] text-muted">
           <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-primary" />
-          {label}
+          {t(label)}
         </div>
       ))}
     </div>
@@ -229,6 +232,7 @@ function ChecksStage({
   onRecoveryKey: (key: string) => void;
   onContinue: () => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const [showPerms, setShowPerms] = useState(false);
   const [changingToken, setChangingToken] = useState(false);
@@ -307,50 +311,50 @@ function ChecksStage({
   }, [status?.setupComplete, qc]);
 
   if (error && !status) {
-    return <Alert tone="danger" title="Setup is unavailable" action={<Button size="sm" onClick={() => refetch()}>Retry</Button>}>{errorText(error)}</Alert>;
+    return <Alert tone="danger" title={t('setup.unavailable')} action={<Button size="sm" onClick={() => refetch()}>{t('common.retry')}</Button>}>{errorText(error)}</Alert>;
   }
 
   const permSummary = missingRequired.length
-    ? `${missingRequired.length} required permission${missingRequired.length === 1 ? '' : 's'} missing. Edit the token in Cloudflare, then check again.`
+    ? t('setup.permsRequiredMissing', { n: missingRequired.length, s: missingRequired.length === 1 ? '' : 's' })
     : untested.length
-      ? 'No problems so far. Domain permissions are checked once a domain is in the account.'
+      ? t('setup.permsUntested')
       : missingOptional.length
-        ? `${missingOptional.length} optional permission${missingOptional.length === 1 ? '' : 's'} missing; some extras will be unavailable.`
-        : 'The token has every permission OpenInbox uses.';
+        ? t('setup.permsOptionalMissing', { n: missingOptional.length, s: missingOptional.length === 1 ? '' : 's' })
+        : t('setup.permsAllOk');
 
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden">
         <ol className="py-1">
-          <SetupStep n={1} title="Check this deployment" state={dbState} summary={c && !checking ? c.database.message : 'Checking the database…'} />
+          <SetupStep n={1} title={t('setup.stepCheckDeployment')} state={dbState} summary={c && !checking ? c.database.message : t('setup.checkingDatabase')} />
 
           <SetupStep
             n={2}
-            title="Connect Cloudflare"
+            title={t('setup.stepCloudflare')}
             state={cfState}
             summary={
               connecting === 'token' || connecting === 'change'
-                ? 'Checking the token with Cloudflare and looking for this Worker…'
+                ? t('setup.checkingToken')
                 : !c
-                  ? 'Waiting for the deployment check…'
+                  ? t('setup.waitingDeployment')
                   : cfState === 'working'
-                    ? 'Verifying the token with Cloudflare…'
+                    ? t('setup.verifyingToken')
                     : activating
-                      ? 'Token connected.'
+                      ? t('setup.tokenConnected')
                       : cfState === 'locked'
-                        ? 'An API token lets OpenInbox set up Email Routing and DNS for your domains.'
+                        ? t('setup.tokenExplainer')
                         : c.cloudflare.ok || c.cloudflare.source
                           ? c.cloudflare.message
-                          : 'Create an API token in Cloudflare and paste it here. OpenInbox uses it to set up Email Routing and DNS for you, and it proves this deployment is yours.'
+                          : t('setup.createTokenPrompt')
             }
           >
             {(cfState === 'active' || cfState === 'error' || connecting === 'token') && (
               <TokenForm createsKey={keyState === 'missing'} onBusy={busy('token')} onSaved={saved} />
             )}
-            {(connecting === 'token' || connecting === 'change') && <SlowNote after={8}>Still waiting for Cloudflare. This can take a few more seconds.</SlowNote>}
+            {(connecting === 'token' || connecting === 'change') && <SlowNote after={8}>{t('setup.slowCloudflare')}</SlowNote>}
             {canChangeToken && !changingToken && !connecting && (
               <button type="button" className="mt-1 text-[13px] text-primary-text hover:underline" onClick={() => setChangingToken(true)}>
-                Use a different token
+                {t('setup.useDifferentToken')}
               </button>
             )}
             {canChangeToken && changingToken && (
@@ -364,40 +368,40 @@ function ChecksStage({
               />
             )}
             {c?.cloudflare.ok && c.cloudflare.source === 'secret' && (
-              <div className="mt-1 text-xs text-faint">From the CF_API_TOKEN secret. Change it in the Worker's Settings → Variables and Secrets.</div>
+              <div className="mt-1 text-xs text-faint">{t('setup.tokenFromSecret')}</div>
             )}
           </SetupStep>
 
           {showKeyStep && (
             <SetupStep
               n={3}
-              title="Save your recovery key"
+              title={t('setup.stepRecoveryKey')}
               state={keyStepState}
               summary={
                 keyState === 'missing' || !c
-                  ? 'Created for you once Cloudflare is connected. You need it to get back in if you lose your password.'
+                  ? t('setup.keyCreatedLater')
                   : activating
-                    ? 'Saving the key to this Worker as ENCRYPTION_KEY. Cloudflare usually takes a few seconds.'
+                    ? t('setup.savingKey')
                     : freshKey
-                      ? 'Shown only this once. Keep it in a password manager; you paste it in the next step.'
+                      ? t('setup.keyShownOnce')
                       : c.encryptionKey.message
               }
             >
-              {activating && <SlowNote after={20}>Taking longer than usual. Keep this page open; it carries on by itself.</SlowNote>}
+              {activating && <SlowNote after={20}>{t('setup.slowKey')}</SlowNote>}
               {recoveryKey && (freshKey || showKey) && <RecoveryKey value={recoveryKey} />}
               {freshKey && (
                 <Button variant="primary" size="sm" className="mt-3" icon={<Check className="h-4 w-4" />} onClick={() => setKeySaved(true)}>
-                  I've saved it
+                  {t('setup.savedIt')}
                 </Button>
               )}
               {recoveryKey && !freshKey && (
                 <button type="button" className="mt-1 text-[13px] text-primary-text hover:underline" onClick={() => setShowKey((s) => !s)}>
-                  {showKey ? 'Hide the key' : 'Show the key again'}
+                  {showKey ? t('setup.hideKey') : t('setup.showKeyAgain')}
                 </button>
               )}
               {!recoveryKey && keyState === 'generated' && !replacingKey && (
                 <button type="button" className="mt-1 text-[13px] text-primary-text hover:underline" onClick={() => setReplacingKey(true)}>
-                  Didn't save the key? Create a new one
+                  {t('setup.didntSaveKey')}
                 </button>
               )}
               {!recoveryKey && keyState === 'generated' && replacingKey && (
@@ -416,21 +420,21 @@ function ChecksStage({
 
           <SetupStep
             n={showKeyStep ? 4 : 3}
-            title="Find your domains"
+            title={t('setup.stepFindDomains')}
             state={findState}
             last
             summary={
               findState === 'locked'
-                ? 'Finds this Worker, the domains in your account and what the token is allowed to do.'
+                ? t('setup.findDomainsSummary')
                 : findState === 'working'
-                  ? 'Looking things up in your Cloudflare account…'
+                  ? t('setup.lookingUp')
                   : findState === 'error'
-                    ? 'Fix the problem below, then check again.'
-                    : 'Everything OpenInbox needs is in place.'
+                    ? t('setup.fixThenCheck')
+                    : t('setup.everythingReady')
             }
           >
-            {findState === 'working' && <PendingLines items={['Finding this Worker', 'Listing the domains in your account', 'Checking what the token is allowed to do']} />}
-            {findState === 'working' && <SlowNote after={6}>Cloudflare is taking a moment to answer.</SlowNote>}
+            {findState === 'working' && <PendingLines items={['setup.pendingFindingWorker', 'setup.pendingListingDomains', 'setup.pendingCheckingToken']} />}
+            {findState === 'working' && <SlowNote after={6}>{t('setup.slowLookup')}</SlowNote>}
             {findState !== 'working' && findState !== 'locked' && (
               <div className="mt-2 rounded-lg border border-border px-3 py-1">
                 <ResultLine check={c!.worker} />
@@ -447,7 +451,7 @@ function ChecksStage({
                   <NotCovered zones={status!.zones.filter((z) => z.usable === false).map((z) => z.name)} />
                   {!c!.zones.ok && c!.zones.count === 0 && (
                     <a href="https://dash.cloudflare.com/?to=/:account/add-site" target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary-text hover:underline">
-                      Add a domain to Cloudflare <ExternalLink className="h-3.5 w-3.5" />
+                      {t('setup.addDomain')} <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   )}
                 </ResultLine>
@@ -475,19 +479,19 @@ function ChecksStage({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1">
           <Button variant="ghost" icon={<RefreshCw className="h-4 w-4" />} onClick={() => refetch(true)} loading={checking} disabled={!!connecting || checking}>
-            {checking ? 'Checking…' : 'Check again'}
+            {checking ? t('setup.checking') : t('setup.checkAgain')}
           </Button>
           {!checking && c && (
             <span key={checkedAt} className="flex min-w-0 animate-fade-in items-center gap-1.5 truncate text-xs text-faint" role="status">
               {problems ? <CircleX className="h-3.5 w-3.5 shrink-0 text-danger" /> : <CircleCheck className="h-3.5 w-3.5 shrink-0 text-success" />}
               <span className="truncate">
-                {problems ? `${problems} ${problems === 1 ? 'problem' : 'problems'} found` : ready ? 'All checks passed' : 'No problems found'} · {new Date(checkedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {problems ? t('setup.problemsFound', { n: problems, s: problems === 1 ? '' : 's' }) : ready ? t('setup.allChecksPassed') : t('setup.noProblems')} · {new Date(checkedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
             </span>
           )}
         </div>
         <Button variant="primary" size="lg" disabled={!ready || checking} onClick={onContinue}>
-          Continue
+          {t('setup.continue')}
         </Button>
       </div>
     </div>
@@ -496,15 +500,17 @@ function ChecksStage({
 
 // Domains the token can see but not manage (#12): it was limited to the others.
 function NotCovered({ zones }: { zones: string[] }) {
+  const t = useT();
   if (!zones.length) return null;
   return (
     <div className="mt-1.5 text-xs text-muted">
-      Not covered by this token: {zones.join(', ')}. To use {zones.length === 1 ? 'it' : 'one of them'}, add it to the token's zone resources in Cloudflare, then check again.
+      {t('setup.notCovered', { zones: zones.join(', '), which: zones.length === 1 ? t('setup.notCoveredIt') : t('setup.notCoveredSome') })}
     </div>
   );
 }
 
 export function PermissionList({ permissions, compact }: { permissions: PermissionCheck[]; compact?: boolean }) {
+  const t = useT();
   // Two columns of one-line rows; the reason each is needed shows on hover.
   if (compact)
     return (
@@ -514,7 +520,7 @@ export function PermissionList({ permissions, compact }: { permissions: Permissi
             {p.ok ? <CircleCheck className="h-3.5 w-3.5 shrink-0 text-success" /> : p.untested ? <CircleDashed className="h-3.5 w-3.5 shrink-0 text-faint" /> : p.optional ? <CircleX className="h-3.5 w-3.5 shrink-0 text-faint" /> : <CircleX className="h-3.5 w-3.5 shrink-0 text-danger" />}
             <span className={cn('min-w-0 flex-1 truncate', p.ok ? 'text-fg' : 'text-muted')}>
               {p.name}
-              {p.optional && ' (optional)'}
+              {p.optional && t('setup.optionalSuffix')}
             </span>
             <span className="shrink-0 text-[11.5px] text-faint">{p.access}</span>
           </div>
@@ -529,11 +535,11 @@ export function PermissionList({ permissions, compact }: { permissions: Permissi
           <div className="min-w-0 flex-1">
             <div className="text-[13px]">
               <span className="text-muted">{p.scope} →</span> <span className="font-medium">{p.name}</span> <span className="text-muted">· {p.access}</span>
-              {p.optional && <span className="ml-1.5 text-xs text-faint">(optional)</span>}
+              {p.optional && <span className="ml-1.5 text-xs text-faint">({t('setup.optionalWord')})</span>}
             </div>
             <div className="text-xs text-muted">
               {p.why}
-              {p.untested && <span className="text-faint"> · checked once you add a domain</span>}
+              {p.untested && <span className="text-faint">{t('setup.checkedOnceDomain')}</span>}
             </div>
           </div>
         </div>
@@ -545,14 +551,15 @@ export function PermissionList({ permissions, compact }: { permissions: Permissi
 // The recovery key the deploy used to ask for: shown once, right after connecting the token
 // generated it.
 function RecoveryKey({ value }: { value: string }) {
+  const t = useT();
   return (
     <div className="mt-3 space-y-3 rounded-lg border border-warning/40 bg-warning-soft p-4">
       <div className="flex items-start gap-2 text-[13px]">
         <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
         <div>
-          <div className="font-medium text-fg">Save your recovery key now</div>
+          <div className="font-medium text-fg">{t('setup.saveKeyNow')}</div>
           <div className="mt-0.5 text-muted">
-            It is shown only this once. You paste it in the next step, and you need it to get back in if you lose your password. Keep it in a password manager.
+            {t('setup.keyShownOnceBody')}
           </div>
         </div>
       </div>
@@ -572,7 +579,7 @@ function RecoveryKey({ value }: { value: string }) {
               )
             }
           >
-            <Download className="h-3.5 w-3.5" /> Download
+            <Download className="h-3.5 w-3.5" /> {t('setup.download')}
           </button>
         </div>
       </div>
@@ -593,6 +600,7 @@ function TokenForm({
   newKey?: boolean;
   createsKey?: boolean;
 }) {
+  const t = useT();
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -617,8 +625,8 @@ function TokenForm({
     <div className="flex flex-wrap gap-2">
       <Input
         type="password"
-        aria-label="Cloudflare API token"
-        placeholder="Paste your API token"
+        aria-label={t('setup.tokenAriaLabel')}
+        placeholder={t('setup.tokenPlaceholder')}
         className="min-w-0 flex-1 basis-56"
         value={token}
         onChange={(e) => setToken(e.target.value)}
@@ -626,11 +634,11 @@ function TokenForm({
         required
       />
       <Button type="submit" variant="primary" loading={busy}>
-        {busy ? 'Checking…' : 'Connect'}
+        {busy ? t('setup.checking') : t('setup.connect')}
       </Button>
       {onCancel && (
         <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
-          Cancel
+          {t('common.cancel')}
         </Button>
       )}
     </div>
@@ -639,7 +647,7 @@ function TokenForm({
     <form onSubmit={submit} className="mt-3 rounded-lg border border-border bg-surface-2 p-3.5 sm:p-4">
       {newKey ? (
         <div className="space-y-3">
-          <p className="text-[13px] text-muted">Paste your Cloudflare API token again to prove this deployment is yours. A new recovery key replaces the old one.</p>
+          <p className="text-[13px] text-muted">{t('setup.newKeyIntro')}</p>
           {paste}
         </div>
       ) : (
@@ -647,17 +655,17 @@ function TokenForm({
           <li className="flex gap-3">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-semibold text-muted ring-1 ring-border">1</span>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium">Create a token</div>
-              <div className="mt-0.5 text-[12.5px] text-muted">The link opens Cloudflare with the permissions filled in. Choose your account and domains, then create the token and copy it.</div>
+              <div className="text-[13px] font-medium">{t('setup.createToken')}</div>
+              <div className="mt-0.5 text-[12.5px] text-muted">{t('setup.createTokenHelp')}</div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <a href={tokenTemplateUrl()} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-medium text-primary-fg hover:bg-primary-hover">
-                  <Cloud className="h-4 w-4" /> Create token <ExternalLink className="h-3.5 w-3.5" />
+                  <Cloud className="h-4 w-4" /> {t('setup.createTokenLink')} <ExternalLink className="h-3.5 w-3.5" />
                 </a>
                 <button type="button" className="inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-fg" onClick={() => setShowPerms((s) => !s)} aria-expanded={showPerms}>
-                  What it can do <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showPerms && 'rotate-180')} />
+                  {t('setup.whatItCanDo')} <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showPerms && 'rotate-180')} />
                 </button>
                 <a href={ACCOUNT_TOKENS_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-fg">
-                  API tokens page <ExternalLink className="h-3 w-3" />
+                  {t('setup.apiTokensPage')} <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
               {showPerms && (
@@ -665,7 +673,7 @@ function TokenForm({
                   {TOKEN_PERMISSIONS.map((p) => (
                     <li key={p.key}>
                       {p.scope} · {p.name} · {p.access}
-                      {p.optional && ' (optional)'}
+                      {p.optional && t('setup.optionalSuffix')}
                     </li>
                   ))}
                 </ul>
@@ -676,9 +684,9 @@ function TokenForm({
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-semibold text-muted ring-1 ring-border">2</span>
             <div className="min-w-0 flex-1 space-y-2">
               <div>
-                <div className="text-[13px] font-medium">Paste it here</div>
+                <div className="text-[13px] font-medium">{t('setup.pasteItHere')}</div>
                 <div className="mt-0.5 text-[12.5px] text-muted">
-                  It is stored encrypted and never shown again.{createsKey && ' Connecting also creates your recovery key.'}
+                  {t('setup.tokenStored')}{createsKey && t('setup.tokenCreatesKey')}
                 </div>
               </div>
               {paste}
@@ -706,6 +714,7 @@ function AdminStage({
   onBack: () => void;
   onClaimed: (c: { domainId: number; address: string; domain: string }) => void;
 }) {
+  const t = useT();
   const [zoneId, setZoneId] = useState(zones.find((z) => z.status === 'active')?.id ?? zones[0]?.id ?? '');
   const [localPart, setLocalPart] = useState('admin');
   const [name, setName] = useState('');
@@ -724,8 +733,8 @@ function AdminStage({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (password !== confirm) return setError('The passwords do not match.');
-    if (needsConfirm && !replaceMx) return setError(`Confirm that OpenInbox should take over mail for ${zone?.name}.`);
+    if (password !== confirm) return setError(t('setup.passwordsMismatch'));
+    if (needsConfirm && !replaceMx) return setError(t('setup.confirmTakeover', { domain: zone?.name ?? '' }));
     setBusy(true);
     setError('');
     try {
@@ -741,11 +750,11 @@ function AdminStage({
     <Card className="p-6">
       <form onSubmit={submit} className="space-y-5">
         <div>
-          <h2 className="text-base font-semibold">Create your admin email</h2>
-          <p className="mt-1 text-[13px] text-muted">This address is your first inbox and your sign-in. You can add more domains, inboxes and people later.</p>
+          <h2 className="text-base font-semibold">{t('setup.adminTitle')}</h2>
+          <p className="mt-1 text-[13px] text-muted">{t('setup.adminIntro')}</p>
         </div>
         {error && <Alert tone="danger">{error}</Alert>}
-        <Field label="Domain" id="zone">
+        <Field label={t('setup.fieldDomain')} id="zone">
           <Select id="zone" value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
             {zones.map((z) => (
               <option key={z.id} value={z.id}>
@@ -757,39 +766,39 @@ function AdminStage({
         </Field>
         {inspection.isLoading && (
           <div className="flex items-center gap-2 text-[13px] text-muted">
-            <LoaderCircle className="h-4 w-4 animate-spin" /> Checking where mail for {zone?.name} goes now…
+            <LoaderCircle className="h-4 w-4 animate-spin" /> {t('setup.checkingMx', { domain: zone?.name ?? '' })}
           </div>
         )}
-        {mx && mx.mxState === 'none' && <Alert tone="success">{mx.name} does not receive mail yet. OpenInbox will set it up.</Alert>}
-        {mx && mx.mxState === 'cloudflare' && <Alert tone="success">{mx.name} already uses Cloudflare Email Routing. OpenInbox will route its mail.</Alert>}
+        {mx && mx.mxState === 'none' && <Alert tone="success">{t('setup.mxNone', { domain: mx.name })}</Alert>}
+        {mx && mx.mxState === 'cloudflare' && <Alert tone="success">{t('setup.mxCloudflare', { domain: mx.name })}</Alert>}
         {mx && mx.mxState === 'other' && (
-          <Alert tone="warning" title={`${mx.name} receives mail somewhere else`}>
-            <div>Its MX records point to {mx.mx.map((m) => m.host).join(', ')}. Continuing replaces them, so all mail for {mx.name} goes to OpenInbox instead.</div>
+          <Alert tone="warning" title={t('setup.mxOtherTitle', { domain: mx.name })}>
+            <div>{t('setup.mxOtherBody', { hosts: mx.mx.map((m) => m.host).join(', '), domain: mx.name })}</div>
             <div className="mt-2">
-              <Checkbox checked={replaceMx} onChange={setReplaceMx} label={`Yes, move mail for ${mx.name} to OpenInbox`} />
+              <Checkbox checked={replaceMx} onChange={setReplaceMx} label={t('setup.mxMoveConfirm', { domain: mx.name })} />
             </div>
           </Alert>
         )}
         {mx && mx.conflicts.length > 0 && (
-          <Alert tone="neutral" title="Existing routing rules">
-            {mx.conflicts.map((c) => c.address).join(', ')} {mx.conflicts.length === 1 ? 'has its own rule' : 'have their own rules'} in Email Routing and will keep bypassing OpenInbox. You can disable them later from the domain page.
+          <Alert tone="neutral" title={t('setup.existingRouting')}>
+            {t('setup.conflictsBody', { addresses: mx.conflicts.map((c) => c.address).join(', '), verb: mx.conflicts.length === 1 ? t('setup.conflictsHas') : t('setup.conflictsHave') })}
           </Alert>
         )}
         {inspection.error ? <Alert tone="danger">{errorText(inspection.error)}</Alert> : null}
-        <Field label="Your email address" id="local">
+        <Field label={t('setup.fieldEmail')} id="local">
           <div className="flex items-center overflow-hidden rounded-lg border border-border bg-surface focus-within:border-primary focus-within:ring-3 focus-within:ring-[var(--ring)]">
             <input id="local" className="h-9 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none" value={localPart} onChange={(e) => setLocalPart(e.target.value.trim())} required />
             <span className="border-l border-border bg-surface-2 px-3 py-2 text-sm text-muted">@{zone?.name}</span>
           </div>
         </Field>
-        <Field label="Your name" id="name" hint="Shown as the sender name on mail you send.">
+        <Field label={t('setup.fieldName')} id="name" hint={t('setup.nameHint')}>
           <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Jane Doe" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Password" id="password">
+          <Field label={t('setup.fieldPassword')} id="password">
             <PasswordInput id="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={10} />
           </Field>
-          <Field label="Confirm password" id="confirm">
+          <Field label={t('setup.fieldConfirmPassword')} id="confirm">
             <PasswordInput id="confirm" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
           </Field>
         </div>
@@ -798,25 +807,25 @@ function AdminStage({
           <Field
             label={
               <span className="inline-flex items-center gap-1.5">
-                <KeyRound className="h-4 w-4 text-primary" /> Recovery key
+                <KeyRound className="h-4 w-4 text-primary" /> {t('setup.fieldRecoveryKey')}
               </span>
             }
             id="key"
             hint={
               keyState === 'set'
-                ? 'Paste the ENCRYPTION_KEY set for this Worker. It proves the deployment is yours.'
-                : 'Paste the recovery key from the previous step to confirm you saved it. Lost it? Go back and create a new one.'
+                ? t('setup.keyHintSet')
+                : t('setup.keyHintFresh')
             }
           >
-            <PasswordInput id="key" value={setupKey} onChange={(e) => setSetupKey(e.target.value)} required placeholder={keyState === 'set' ? 'ENCRYPTION_KEY' : 'Recovery key'} />
+            <PasswordInput id="key" value={setupKey} onChange={(e) => setSetupKey(e.target.value)} required placeholder={keyState === 'set' ? 'ENCRYPTION_KEY' : t('setup.recoveryKeyPlaceholder')} />
           </Field>
         </div>
         <div className="flex items-center justify-between pt-1">
           <Button variant="ghost" icon={<ArrowLeft className="h-4 w-4" />} onClick={onBack}>
-            Back
+            {t('common.back')}
           </Button>
           <Button type="submit" variant="primary" size="lg" loading={busy} disabled={!zoneId || inspection.isLoading}>
-            {busy ? 'Creating your account…' : 'Create and set up'}
+            {busy ? t('setup.creatingAccount') : t('setup.createAndSetup')}
           </Button>
         </div>
       </form>
@@ -825,6 +834,7 @@ function AdminStage({
 }
 
 function DomainStage({ claim, onDone }: { claim: { domainId: number; address: string; domain: string }; onDone: () => void }) {
+  const t = useT();
   const [steps, setSteps] = useState<DomainSetupStep[]>([]);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
@@ -857,17 +867,17 @@ function DomainStage({ claim, onDone }: { claim: { domainId: number; address: st
   const shown: DomainSetupStep[] = steps.length
     ? steps
     : [
-        { id: 'routing', label: 'Turn on Email Routing', status: 'pending' },
-        { id: 'catchall', label: 'Route all mail for the domain to OpenInbox', status: 'pending' },
-        { id: 'dmarc', label: 'Add a DMARC record', status: 'pending' },
-        { id: 'verify', label: 'Check that mail can arrive', status: 'pending' },
+        { id: 'routing', label: 'setup.domainStepRouting', status: 'pending' },
+        { id: 'catchall', label: 'setup.domainStepCatchall', status: 'pending' },
+        { id: 'dmarc', label: 'setup.domainStepDmarc', status: 'pending' },
+        { id: 'verify', label: 'setup.domainStepVerify', status: 'pending' },
       ];
   const firstPending = shown.findIndex((s) => s.status !== 'done' && s.status !== 'skipped');
 
   return (
     <Card className="p-6">
-      <h2 className="text-base font-semibold">Setting up {claim.domain}</h2>
-      <p className="mt-1 text-[13px] text-muted">Your account {claim.address} is ready. Now connecting the domain through the Cloudflare API.</p>
+      <h2 className="text-base font-semibold">{t('setup.settingUpDomain', { domain: claim.domain })}</h2>
+      <p className="mt-1 text-[13px] text-muted">{t('setup.domainIntro', { address: claim.address })}</p>
       <div className="mt-5 space-y-3">
         {shown.map((s, i) => (
           <div key={s.id} className="flex gap-3">
@@ -883,7 +893,7 @@ function DomainStage({ claim, onDone }: { claim: { domainId: number; address: st
               )}
             </div>
             <div>
-              <div className="text-sm font-medium">{s.label}</div>
+              <div className="text-sm font-medium">{s.label.startsWith('setup.') ? t(s.label) : s.label}</div>
               {s.message && <div className={cn('text-[13px]', s.status === 'error' ? 'text-danger' : 'text-muted')}>{s.message}</div>}
             </div>
           </div>
@@ -891,15 +901,15 @@ function DomainStage({ claim, onDone }: { claim: { domainId: number; address: st
       </div>
       {error && (
         <div className="mt-5 space-y-3">
-          <Alert tone="danger" title="Setup stopped">
+          <Alert tone="danger" title={t('setup.setupStopped')}>
             {error}
           </Alert>
           <div className="flex gap-2">
             <Button variant="primary" icon={<RefreshCw className="h-4 w-4" />} onClick={run} loading={running}>
-              Retry
+              {t('common.retry')}
             </Button>
             <Button variant="ghost" onClick={onDone}>
-              Skip for now
+              {t('setup.skipForNow')}
             </Button>
           </div>
         </div>
@@ -909,6 +919,7 @@ function DomainStage({ claim, onDone }: { claim: { domainId: number; address: st
 }
 
 function DoneStage({ address }: { address: string }) {
+  const t = useT();
   const qc = useQueryClient();
   const navigate = useNavigate();
   // Navigate first: once the session refreshes, the setup routes are replaced by the app.
@@ -921,13 +932,13 @@ function DoneStage({ address }: { address: string }) {
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-soft">
         <Sparkles className="h-7 w-7 text-success" />
       </div>
-      <h2 className="mt-4 text-lg font-semibold">You're all set</h2>
+      <h2 className="mt-4 text-lg font-semibold">{t('setup.allSet')}</h2>
       <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
-        Mail sent to <span className="font-medium text-fg">{address}</span> now arrives in OpenInbox. Next, connect a sending provider (Resend, Brevo, Mailjet or SMTP) so you can send and reply.
+        {t('setup.doneBodyStart')} <span className="font-medium text-fg">{address}</span> {t('setup.doneBodyEnd')}
       </p>
       <div className="mt-6 flex justify-center gap-2">
         <Button variant="primary" size="lg" icon={<Mail className="h-4 w-4" />} onClick={go}>
-          Open the dashboard
+          {t('setup.openDashboard')}
         </Button>
       </div>
     </Card>
