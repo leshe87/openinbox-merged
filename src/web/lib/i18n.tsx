@@ -1,62 +1,32 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { storageGet, storageSet } from './utils';
+import { getLanguage, setLanguage as setLanguageState, subscribeLanguage } from './language';
+import type { Language } from './language';
 
-// Language of the interface. English is the default; a browser set to Chinese
-// starts in Chinese. The choice is stored in localStorage ('oi.language') and
-// applies before React renders (see initLanguage), so the login and setup
-// pages translate too. New strings go in the dictionaries below with a
-// `section.key` id; t() falls back to the English value when a Chinese one is
-// missing, so a half-translated screen still reads fine.
+export { getLanguage, LANGUAGES } from './language';
+export type { Language } from './language';
 
-export type Language = 'en' | 'zh';
-
-export const LANGUAGES: { value: Language; label: string }[] = [
-  { value: 'en', label: 'English' },
-  { value: 'zh', label: '中文' },
-];
-
-const KEY = 'oi.language';
-
-function defaultLanguage(): Language {
-  if (typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('zh')) return 'zh';
-  return 'en';
-}
-
-let current: Language = storageGet<Language>(KEY, defaultLanguage());
-const listeners = new Set<() => void>();
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-export function getLanguage(): Language {
-  return current;
-}
-
+// The <html lang> attribute follows the choice; this module is web-only, so
+// the DOM access lives here, not in ./language.ts (which the test project
+// also imports, without a DOM lib).
 export function setLanguage(lang: Language): void {
-  if (lang === current) return;
-  current = lang;
-  storageSet(KEY, lang);
+  setLanguageState(lang);
   document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
-  emit();
 }
 
 // Applied before React renders, to avoid a flash of the wrong language.
 export function initLanguage(): void {
-  document.documentElement.lang = current === 'zh' ? 'zh-CN' : 'en';
+  document.documentElement.lang = getLanguage() === 'zh' ? 'zh-CN' : 'en';
 }
 
 export function useLanguage(): [Language, (l: Language) => void] {
-  const lang = useSyncExternalStore(
-    (onChange) => {
-      listeners.add(onChange);
-      return () => {
-        listeners.delete(onChange);
-      };
-    },
-    () => current,
-  );
+  const lang = useSyncExternalStore(subscribeLanguage, getLanguage);
   return [lang, setLanguage];
 }
+
+// Dictionaries for the interface. New strings go in with a `section.key` id;
+// t() falls back to the English value when a Chinese one is missing, so a
+// half-translated screen still reads fine. The language state itself lives in
+// ./language.ts (plain .ts, no JSX) so non-React code can read it too.
 
 type Dict = Record<string, string>;
 
@@ -2996,7 +2966,7 @@ const dicts: Record<Language, Dict> = { en, zh };
 // Look up a string, with {name} interpolation. Falls back to English, then to
 // the key itself, so a missing Chinese entry never blanks the UI.
 export function t(key: string, vars?: Record<string, string | number>): string {
-  const raw = dicts[current][key] ?? en[key] ?? key;
+  const raw = dicts[getLanguage()][key] ?? en[key] ?? key;
   if (!vars) return raw;
   return raw.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? `{${name}}`));
 }

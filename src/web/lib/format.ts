@@ -1,5 +1,5 @@
 import type { Address } from './types';
-import { getLanguage } from './i18n';
+import { getLanguage } from './language';
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 const rtfZh = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' });
